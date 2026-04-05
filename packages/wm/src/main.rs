@@ -40,9 +40,9 @@ mod ipc_server;
 mod models;
 mod pending_sync;
 mod sys_tray;
-mod traits;
 #[cfg(test)]
 mod tests;
+mod traits;
 mod user_config;
 mod wm;
 mod wm_state;
