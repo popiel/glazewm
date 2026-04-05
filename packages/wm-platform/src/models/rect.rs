@@ -270,27 +270,248 @@ impl Rect {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::Direction;
 
   #[test]
-  fn intersection_area() {
-    // Full overlap.
+  fn intersection_area_full_overlap() {
     let r1 = Rect::from_xy(0, 0, 100, 100);
     let r2 = Rect::from_xy(0, 0, 100, 100);
-    assert_eq!(r1.intersection_area(&r2), 10000); // 100 * 100
+    assert_eq!(r1.intersection_area(&r2), 10000);
+  }
 
-    // Partial overlap.
+  #[test]
+  fn intersection_area_partial_overlap() {
     let r1 = Rect::from_xy(0, 0, 100, 100);
     let r2 = Rect::from_xy(50, 50, 100, 100);
-    assert_eq!(r1.intersection_area(&r2), 2500); // 50 * 50
+    assert_eq!(r1.intersection_area(&r2), 2500);
+  }
 
-    // No overlap.
+  #[test]
+  fn intersection_area_no_overlap() {
     let r1 = Rect::from_xy(0, 0, 100, 100);
     let r2 = Rect::from_xy(200, 200, 100, 100);
     assert_eq!(r1.intersection_area(&r2), 0);
+  }
 
-    // No overlap (edges touching).
+  #[test]
+  fn intersection_area_edges_touching() {
     let r1 = Rect::from_xy(0, 0, 100, 100);
     let r2 = Rect::from_xy(100, 0, 100, 100);
     assert_eq!(r1.intersection_area(&r2), 0);
+  }
+
+  #[test]
+  fn contains_point_inside_rect() {
+    let rect = Rect::from_xy(0, 0, 100, 100);
+    let point = Point { x: 50, y: 50 };
+    assert!(rect.contains_point(&point));
+  }
+
+  #[test]
+  fn contains_point_on_edge() {
+    let rect = Rect::from_xy(0, 0, 100, 100);
+    let point = Point { x: 0, y: 0 };
+    assert!(rect.contains_point(&point));
+  }
+
+  #[test]
+  fn contains_point_outside_rect() {
+    let rect = Rect::from_xy(0, 0, 100, 100);
+    let point = Point { x: 150, y: 50 };
+    assert!(!rect.contains_point(&point));
+  }
+
+  #[test]
+  fn contains_rect_full_containment() {
+    let outer = Rect::from_xy(0, 0, 100, 100);
+    let inner = Rect::from_xy(10, 10, 50, 50);
+    assert!(outer.contains_rect(&inner));
+  }
+
+  #[test]
+  fn contains_rect_partial_overlap() {
+    let outer = Rect::from_xy(0, 0, 100, 100);
+    let other = Rect::from_xy(50, 50, 100, 100);
+    assert!(!outer.contains_rect(&other));
+  }
+
+  #[test]
+  fn contains_rect_same_rect() {
+    let rect = Rect::from_xy(0, 0, 100, 100);
+    assert!(rect.contains_rect(&rect));
+  }
+
+  #[test]
+  fn union_two_disjoint_rects() {
+    let r1 = Rect::from_xy(0, 0, 50, 50);
+    let r2 = Rect::from_xy(100, 100, 50, 50);
+    let result = r1.union(&r2);
+    assert_eq!(result.left, 0);
+    assert_eq!(result.top, 0);
+    assert_eq!(result.right, 150);
+    assert_eq!(result.bottom, 150);
+  }
+
+  #[test]
+  fn union_two_overlapping_rects() {
+    let r1 = Rect::from_xy(0, 0, 100, 100);
+    let r2 = Rect::from_xy(50, 50, 100, 100);
+    let result = r1.union(&r2);
+    assert_eq!(result.left, 0);
+    assert_eq!(result.top, 0);
+    assert_eq!(result.right, 150);
+    assert_eq!(result.bottom, 150);
+  }
+
+  #[test]
+  fn clamp_rect_within_larger_rect() {
+    let inner = Rect::from_xy(50, 50, 100, 100);
+    let outer = Rect::from_xy(0, 0, 200, 200);
+    let result = inner.clamp(&outer);
+    assert_eq!(result.left, 50);
+    assert_eq!(result.top, 50);
+    assert_eq!(result.width(), 100);
+    assert_eq!(result.height(), 100);
+  }
+
+  #[test]
+  fn clamp_rect_extends_beyond_bounds() {
+    // When inner rect extends beyond outer, clamp repositions it to outer
+    // bounds but preserves the inner rect's dimensions (not shrunk to
+    // fit)
+    let inner = Rect::from_xy(-50, -50, 100, 100);
+    let outer = Rect::from_xy(0, 0, 200, 200);
+    let result = inner.clamp(&outer);
+    assert_eq!(result.left, 0);
+    assert_eq!(result.top, 0);
+    // The clamp function preserves width/height of inner rect
+    assert_eq!(result.width(), 100);
+    assert_eq!(result.height(), 100);
+  }
+
+  #[test]
+  fn inset_positive_reduces_size() {
+    let rect = Rect::from_xy(10, 10, 100, 100); // left=10, top=10, right=110, bottom=110
+    let result = rect.inset(10);
+    assert_eq!(result.left, 20);
+    assert_eq!(result.top, 20);
+    assert_eq!(result.right, 100);
+    assert_eq!(result.bottom, 100);
+  }
+
+  #[test]
+  fn inset_negative_increases_size() {
+    let rect = Rect::from_xy(10, 10, 100, 100);
+    let result = rect.inset(-10);
+    assert_eq!(result.left, 0);
+    assert_eq!(result.top, 0);
+    assert_eq!(result.right, 120);
+    assert_eq!(result.bottom, 120);
+  }
+
+  #[test]
+  fn translate_in_direction_up() {
+    let rect = Rect::from_xy(50, 50, 100, 100);
+    let result = rect.translate_in_direction(&Direction::Up, 10);
+    assert_eq!(result.x(), 50);
+    assert_eq!(result.y(), 40);
+  }
+
+  #[test]
+  fn translate_in_direction_down() {
+    let rect = Rect::from_xy(50, 50, 100, 100);
+    let result = rect.translate_in_direction(&Direction::Down, 10);
+    assert_eq!(result.x(), 50);
+    assert_eq!(result.y(), 60);
+  }
+
+  #[test]
+  fn translate_in_direction_left() {
+    let rect = Rect::from_xy(50, 50, 100, 100);
+    let result = rect.translate_in_direction(&Direction::Left, 10);
+    assert_eq!(result.x(), 40);
+    assert_eq!(result.y(), 50);
+  }
+
+  #[test]
+  fn translate_in_direction_right() {
+    let rect = Rect::from_xy(50, 50, 100, 100);
+    let result = rect.translate_in_direction(&Direction::Right, 10);
+    assert_eq!(result.x(), 60);
+    assert_eq!(result.y(), 50);
+  }
+
+  #[test]
+  fn translate_to_center_centers_rect() {
+    let inner = Rect::from_xy(0, 0, 50, 50);
+    let outer = Rect::from_xy(0, 0, 200, 200);
+    let result = inner.translate_to_center(&outer);
+    assert_eq!(result.x(), 75);
+    assert_eq!(result.y(), 75);
+  }
+
+  #[test]
+  fn width_and_height_calculation() {
+    let rect = Rect::from_xy(10, 20, 100, 50);
+    assert_eq!(rect.width(), 100);
+    assert_eq!(rect.height(), 50);
+  }
+
+  #[test]
+  fn x_and_y_return_left_top() {
+    let rect = Rect::from_xy(10, 20, 100, 50);
+    assert_eq!(rect.x(), 10);
+    assert_eq!(rect.y(), 20);
+  }
+
+  #[test]
+  fn from_ltrb_creates_correct_rect() {
+    let rect = Rect::from_ltrb(10, 20, 110, 70);
+    assert_eq!(rect.left, 10);
+    assert_eq!(rect.top, 20);
+    assert_eq!(rect.right, 110);
+    assert_eq!(rect.bottom, 70);
+    assert_eq!(rect.width(), 100);
+    assert_eq!(rect.height(), 50);
+  }
+
+  #[test]
+  fn corner_top_left() {
+    let rect = Rect::from_xy(10, 20, 100, 50);
+    let corner = rect.corner(&Corner::TopLeft);
+    assert_eq!(corner.x, 10);
+    assert_eq!(corner.y, 20);
+  }
+
+  #[test]
+  fn corner_top_right() {
+    let rect = Rect::from_xy(10, 20, 100, 50);
+    let corner = rect.corner(&Corner::TopRight);
+    assert_eq!(corner.x, 110);
+    assert_eq!(corner.y, 20);
+  }
+
+  #[test]
+  fn corner_bottom_left() {
+    let rect = Rect::from_xy(10, 20, 100, 50);
+    let corner = rect.corner(&Corner::BottomLeft);
+    assert_eq!(corner.x, 10);
+    assert_eq!(corner.y, 70);
+  }
+
+  #[test]
+  fn corner_bottom_right() {
+    let rect = Rect::from_xy(10, 20, 100, 50);
+    let corner = rect.corner(&Corner::BottomRight);
+    assert_eq!(corner.x, 110);
+    assert_eq!(corner.y, 70);
+  }
+
+  #[test]
+  fn center_point_calculation() {
+    let rect = Rect::from_xy(0, 0, 100, 100);
+    let center = rect.center_point();
+    assert_eq!(center.x, 50);
+    assert_eq!(center.y, 50);
   }
 }

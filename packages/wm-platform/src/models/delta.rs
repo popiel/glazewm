@@ -32,3 +32,65 @@ impl<T: FromStr<Err = crate::ParseError>> FromStr for Delta<T> {
     Ok(Self { inner, is_negative })
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use std::str::FromStr;
+
+  use super::*;
+  use crate::OpacityValue;
+
+  #[test]
+  fn delta_parses_positive_number() {
+    let result = Delta::<OpacityValue>::from_str("+0.5").unwrap();
+    assert!((result.inner.0 - 0.5).abs() < 0.001);
+    assert!(!result.is_negative);
+  }
+
+  #[test]
+  fn delta_parses_negative_number() {
+    let result = Delta::<OpacityValue>::from_str("-0.25").unwrap();
+    assert!((result.inner.0 - 0.25).abs() < 0.001);
+    assert!(result.is_negative);
+  }
+
+  #[test]
+  fn delta_parses_unsigned_number() {
+    let result = Delta::<OpacityValue>::from_str("0.75").unwrap();
+    assert!((result.inner.0 - 0.75).abs() < 0.001);
+    assert!(!result.is_negative);
+  }
+
+  #[test]
+  fn delta_parses_with_whitespace() {
+    let result = Delta::<OpacityValue>::from_str("  +0.25  ").unwrap();
+    assert!((result.inner.0 - 0.25).abs() < 0.001);
+    assert!(!result.is_negative);
+  }
+
+  #[test]
+  fn delta_fails_on_empty_string() {
+    let result = Delta::<OpacityValue>::from_str("");
+    assert!(result.is_err());
+  }
+
+  #[test]
+  fn delta_fails_on_sign_only() {
+    let result = Delta::<OpacityValue>::from_str("-");
+    assert!(result.is_err());
+  }
+
+  #[test]
+  fn delta_parses_percentage_value() {
+    let result = Delta::<OpacityValue>::from_str("+50%").unwrap();
+    assert!((result.inner.0 - 0.5).abs() < 0.001);
+    assert!(!result.is_negative);
+  }
+
+  #[test]
+  fn delta_parses_negative_percentage() {
+    let result = Delta::<OpacityValue>::from_str("-25%").unwrap();
+    assert!((result.inner.0 - 0.25).abs() < 0.001);
+    assert!(result.is_negative);
+  }
+}

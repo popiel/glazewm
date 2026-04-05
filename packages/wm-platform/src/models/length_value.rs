@@ -17,6 +17,7 @@ pub enum LengthUnit {
 }
 
 impl LengthValue {
+  /// Creates a new `LengthValue` from a pixel value.
   #[must_use]
   pub fn from_px(px: i32) -> Self {
     Self {
@@ -26,6 +27,10 @@ impl LengthValue {
     }
   }
 
+  /// Converts the length value to pixels based on a total pixel value.
+  ///
+  /// For percentage values, the amount is multiplied by `total_px`.
+  /// For pixel values, the amount is multiplied by the scale factor.
   #[must_use]
   pub fn to_px(&self, total_px: i32, scale_factor: Option<f32>) -> i32 {
     let scale_factor = scale_factor.unwrap_or(1.0);
@@ -37,6 +42,11 @@ impl LengthValue {
     }
   }
 
+  /// Converts the length value to a percentage based on a total pixel
+  /// value.
+  ///
+  /// For percentage values, returns the amount as-is.
+  /// For pixel values, returns the amount divided by the total pixels.
   #[must_use]
   pub fn to_percentage(&self, total_px: i32) -> f32 {
     match self.unit {
@@ -81,7 +91,6 @@ impl FromStr for LengthValue {
     let amount = captures
       .get(1)
       .and_then(|m| m.as_str().parse::<f32>().ok())
-      // Store percentage units as a fraction of 1.
       .map(|amount| {
         if unit == LengthUnit::Percentage {
           amount / 100.0
@@ -114,5 +123,110 @@ impl<'de> Deserialize<'de> for LengthValue {
         Self::from_str(&str).map_err(serde::de::Error::custom)
       }
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use std::str::FromStr;
+
+  use super::*;
+
+  #[test]
+  fn from_px_creates_pixel_unit() {
+    let result = LengthValue::from_px(100);
+    assert_eq!(result.amount, 100.0);
+    assert_eq!(result.unit, LengthUnit::Pixel);
+
+    // Also handles negative values
+    let negative = LengthValue::from_px(-50);
+    assert_eq!(negative.amount, -50.0);
+    assert_eq!(negative.unit, LengthUnit::Pixel);
+  }
+
+  #[test]
+  fn to_px_with_pixel_unit_and_scale_factor() {
+    let value = LengthValue {
+      amount: 50.0,
+      unit: LengthUnit::Pixel,
+    };
+    // Without scale factor (defaults to 1.0)
+    assert_eq!(value.to_px(100, None), 50);
+    // With scale factor
+    assert_eq!(value.to_px(100, Some(2.0)), 100);
+  }
+
+  #[test]
+  fn to_px_with_percentage_unit() {
+    let value = LengthValue {
+      amount: 0.5,
+      unit: LengthUnit::Percentage,
+    };
+    assert_eq!(value.to_px(200, None), 100);
+  }
+
+  #[test]
+  fn to_percentage_with_percentage_unit() {
+    let value = LengthValue {
+      amount: 50.0,
+      unit: LengthUnit::Percentage,
+    };
+    assert_eq!(value.to_percentage(100), 50.0);
+  }
+
+  #[test]
+  fn to_percentage_with_pixel_unit() {
+    let value = LengthValue {
+      amount: 25.0,
+      unit: LengthUnit::Pixel,
+    };
+    assert_eq!(value.to_percentage(100), 0.25);
+  }
+
+  #[test]
+  fn from_str_parses_percentage_value() {
+    let result = LengthValue::from_str("50%").unwrap();
+    assert_eq!(result.amount, 0.5);
+    assert_eq!(result.unit, LengthUnit::Percentage);
+  }
+
+  #[test]
+  fn from_str_parses_numeric_without_unit() {
+    let result = LengthValue::from_str("100").unwrap();
+    assert_eq!(result.amount, 100.0);
+    assert_eq!(result.unit, LengthUnit::Pixel);
+  }
+
+  #[test]
+  fn from_str_parses_negative_pixel_value() {
+    let result = LengthValue::from_str("-25px").unwrap();
+    assert_eq!(result.amount, -25.0);
+    assert_eq!(result.unit, LengthUnit::Pixel);
+  }
+
+  #[test]
+  fn from_str_parses_negative_percentage_value() {
+    let result = LengthValue::from_str("-25%").unwrap();
+    assert_eq!(result.amount, -0.25);
+    assert_eq!(result.unit, LengthUnit::Percentage);
+  }
+
+  #[test]
+  fn from_str_ignores_unknown_unit() {
+    let result = LengthValue::from_str("100em").unwrap();
+    assert_eq!(result.amount, 100.0);
+    assert_eq!(result.unit, LengthUnit::Pixel);
+  }
+
+  #[test]
+  fn from_str_fails_on_invalid_input() {
+    let result = LengthValue::from_str("invalid");
+    assert!(result.is_err());
+  }
+
+  #[test]
+  fn from_str_fails_on_empty_string() {
+    let result = LengthValue::from_str("");
+    assert!(result.is_err());
   }
 }
