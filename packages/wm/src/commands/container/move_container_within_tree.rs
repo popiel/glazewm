@@ -199,3 +199,275 @@ pub fn lowest_common_ancestor(
 
   None
 }
+
+#[cfg(test)]
+mod tests {
+  use wm_common::{GapsConfig, TilingDirection};
+
+  use super::*;
+  use crate::{
+    commands::container::attach_container,
+    models::{SplitContainer, TilingWindow},
+    tests::{three_children_wm_state, TestWmStateBuilder},
+    traits::{CommonGetters, TilingSizeGetters},
+  };
+
+  #[test]
+  fn lowest_common_ancestor_same_container() {
+    let state = three_children_wm_state();
+    let monitor = state.monitors()[0].clone();
+    let workspace = monitor.workspaces()[0].clone();
+
+    let split = workspace
+      .children()
+      .into_iter()
+      .next()
+      .and_then(|c| c.as_split().cloned())
+      .expect("Expected split");
+
+    let children: Vec<_> = split.children().into_iter().collect();
+    let window = children[0].clone();
+
+    let lca = lowest_common_ancestor(&window, &window);
+
+    assert_eq!(lca.map(|c| c.id()), Some(window.id()));
+  }
+
+  #[test]
+  fn lowest_common_ancestor_siblings() {
+    let state = three_children_wm_state();
+    let monitor = state.monitors()[0].clone();
+    let workspace = monitor.workspaces()[0].clone();
+
+    let split = workspace
+      .children()
+      .into_iter()
+      .next()
+      .and_then(|c| c.as_split().cloned())
+      .expect("Expected split");
+
+    let children: Vec<_> = split.children().into_iter().collect();
+    let window1 = children[0].clone();
+    let window2 = children[1].clone();
+
+    let lca = lowest_common_ancestor(&window1, &window2);
+
+    assert_eq!(lca.map(|c| c.id()), Some(split.id()));
+  }
+
+  #[test]
+  fn lowest_common_ancestor_parent_child() {
+    let state = three_children_wm_state();
+    let monitor = state.monitors()[0].clone();
+    let workspace = monitor.workspaces()[0].clone();
+
+    let split = workspace
+      .children()
+      .into_iter()
+      .next()
+      .and_then(|c| c.as_split().cloned())
+      .expect("Expected split");
+
+    let children: Vec<_> = split.children().into_iter().collect();
+    let window = children[0].clone();
+
+    let lca = lowest_common_ancestor(&split.clone().into(), &window);
+
+    assert_eq!(lca.map(|c| c.id()), Some(split.id()));
+  }
+
+  #[test]
+  fn lowest_common_ancestor_grandparent() {
+    let state = three_children_wm_state();
+    let monitor = state.monitors()[0].clone();
+    let workspace = monitor.workspaces()[0].clone();
+
+    let split = workspace
+      .children()
+      .into_iter()
+      .next()
+      .and_then(|c| c.as_split().cloned())
+      .expect("Expected split");
+
+    let children: Vec<_> = split.children().into_iter().collect();
+    let window = children[0].clone();
+
+    let lca = lowest_common_ancestor(&workspace.clone().into(), &window);
+
+    assert_eq!(lca.map(|c| c.id()), Some(workspace.id()));
+  }
+
+  #[test]
+  fn lowest_common_ancestor_nested_splits() {
+    let outer = SplitContainer::new(
+      TilingDirection::Horizontal,
+      GapsConfig::default(),
+    );
+    let inner = SplitContainer::new(
+      TilingDirection::Vertical,
+      GapsConfig::default(),
+    );
+
+    let window1 = TilingWindow::new_test("W1");
+    let window2 = TilingWindow::new_test("W2");
+    let window3 = TilingWindow::new_test("W3");
+
+    outer.set_tiling_size(1.0);
+    inner.set_tiling_size(0.5);
+    window1.set_tiling_size(0.5);
+    window2.set_tiling_size(0.5);
+    window3.set_tiling_size(0.5);
+
+    attach_container(&inner.clone().into(), &outer.clone().into(), None)
+      .unwrap();
+    attach_container(&window3.clone().into(), &outer.clone().into(), None)
+      .unwrap();
+    attach_container(&window1.clone().into(), &inner.clone().into(), None)
+      .unwrap();
+    attach_container(&window2.clone().into(), &inner.clone().into(), None)
+      .unwrap();
+
+    let lca = lowest_common_ancestor(
+      &window1.clone().into(),
+      &window3.clone().into(),
+    );
+    assert_eq!(lca.map(|c| c.id()), Some(outer.id()));
+
+    let lca_nested = lowest_common_ancestor(
+      &window1.clone().into(),
+      &window2.clone().into(),
+    );
+    assert_eq!(lca_nested.map(|c| c.id()), Some(inner.id()));
+  }
+
+  #[test]
+  fn lowest_common_ancestor_different_branches() {
+    let state = three_children_wm_state();
+    let monitor = state.monitors()[0].clone();
+    let workspace = monitor.workspaces()[0].clone();
+
+    let split = workspace
+      .children()
+      .into_iter()
+      .next()
+      .and_then(|c| c.as_split().cloned())
+      .expect("Expected split");
+
+    let children: Vec<_> = split.children().into_iter().collect();
+    let window1 = children[0].clone();
+    let window3 = children[2].clone();
+
+    let lca = lowest_common_ancestor(&window1, &window3);
+
+    assert_eq!(lca.map(|c| c.id()), Some(split.id()));
+  }
+
+  #[test]
+  fn lowest_common_ancestor_no_common_ancestor() {
+    let window1 = TilingWindow::new_test("W1");
+    let window2 = TilingWindow::new_test("W2");
+
+    let lca = lowest_common_ancestor(
+      &window1.clone().into(),
+      &window2.clone().into(),
+    );
+
+    assert!(lca.is_none());
+  }
+
+  #[test]
+  fn move_container_within_tree_reorders_same_parent() {
+    let (state, _config) = TestWmStateBuilder::new()
+      .with_monitor("DP-1")
+      .with_workspace("1")
+      .with_tiling_window("W1")
+      .with_tiling_window("W2")
+      .with_tiling_window("W3")
+      .with_focused(0, 0)
+      .build();
+
+    let monitor = state.monitors().into_iter().next().unwrap();
+    let workspace = monitor.displayed_workspace().unwrap();
+    let split = workspace.children().into_iter().next().unwrap();
+
+    let children: Vec<_> = split.children().into_iter().collect();
+    let window1 = children[0].clone();
+
+    move_container_within_tree(&window1, &split, 2, &state).unwrap();
+
+    let children_after: Vec<_> = split.children().into_iter().collect();
+    assert_eq!(
+      children_after[0].id(),
+      children[1].id(),
+      "W2 should now be first"
+    );
+    assert_eq!(
+      children_after[1].id(),
+      children[2].id(),
+      "W3 should be second"
+    );
+    assert_eq!(
+      children_after[2].id(),
+      window1.id(),
+      "W1 should now be last"
+    );
+  }
+
+  #[test]
+  fn move_container_within_tree_moves_to_different_parent() {
+    use wm_common::WorkspaceConfig;
+
+    use crate::models::Workspace;
+
+    let (state, _config) = TestWmStateBuilder::new()
+      .with_monitor("DP-1")
+      .with_workspace("1")
+      .with_tiling_window("W1")
+      .with_tiling_window("W2")
+      .with_tiling_window("W3")
+      .build();
+
+    let monitor = state.monitors().into_iter().next().unwrap();
+    let ws2_config = WorkspaceConfig {
+      name: "2".to_string(),
+      display_name: None,
+      bind_to_monitor: None,
+      keep_alive: false,
+    };
+    let ws2 = Workspace::new(
+      ws2_config,
+      wm_common::GapsConfig::default(),
+      wm_common::TilingDirection::Horizontal,
+    );
+
+    attach_container(&ws2.clone().into(), &monitor.clone().into(), None)
+      .unwrap();
+
+    let workspace1 = monitor.displayed_workspace().unwrap();
+    let split1 = workspace1.children().into_iter().next().unwrap();
+
+    let children1: Vec<_> = split1.children().into_iter().collect();
+    let window1 = children1[0].clone();
+
+    move_container_within_tree(&window1, &ws2.clone().into(), 0, &state)
+      .unwrap();
+
+    let ws1_window_count = workspace1
+      .descendants()
+      .filter(|c| matches!(c, crate::models::Container::TilingWindow(_)))
+      .count();
+    assert_eq!(
+      ws1_window_count, 2,
+      "Workspace 1 should have 2 windows left"
+    );
+
+    let ws2_children: Vec<_> = ws2.children().into_iter().collect();
+
+    assert_eq!(ws2_children.len(), 1, "Workspace 2 should have 1 window");
+    assert_eq!(
+      ws2_children[0].id(),
+      window1.id(),
+      "W1 should be in workspace 2"
+    );
+  }
+}
