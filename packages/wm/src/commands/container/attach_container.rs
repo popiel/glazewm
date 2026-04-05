@@ -55,3 +55,169 @@ pub fn attach_container(
 
   Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+  use wm_common::{GapsConfig, TilingDirection};
+
+  use super::*;
+  use crate::{
+    models::{SplitContainer, TilingWindow},
+    tests::three_children_wm_state,
+    traits::{CommonGetters, TilingSizeGetters, WindowGetters},
+  };
+
+  fn create_detached_window(title: &str) -> Container {
+    let window =
+      TilingWindow::new_test_titled(None, title, GapsConfig::default());
+    window.into()
+  }
+
+  #[test]
+  fn attach_container_adds_to_end_when_index_none() {
+    let state = three_children_wm_state();
+    let monitor = state.monitors()[0].clone();
+    let workspace = monitor.workspaces()[0].clone();
+
+    let split = workspace
+      .children()
+      .into_iter()
+      .next()
+      .and_then(|c| c.as_split().cloned())
+      .expect("Expected split");
+
+    let new_window = create_detached_window("New Window");
+    let initial_child_count = split.child_count();
+
+    attach_container(&new_window, &split.clone().into(), None).unwrap();
+
+    assert_eq!(split.child_count(), initial_child_count + 1);
+    assert!(new_window.parent().is_some());
+  }
+
+  #[test]
+  fn attach_container_inserts_at_specific_index() {
+    let state = three_children_wm_state();
+    let monitor = state.monitors()[0].clone();
+    let workspace = monitor.workspaces()[0].clone();
+
+    let split = workspace
+      .children()
+      .into_iter()
+      .next()
+      .and_then(|c| c.as_split().cloned())
+      .expect("Expected split");
+
+    let new_window = create_detached_window("New Window");
+
+    attach_container(&new_window, &split.clone().into(), Some(0)).unwrap();
+
+    let children = split.children();
+    let first_child = children.into_iter().next().unwrap();
+    let window = first_child.as_tiling_window().unwrap();
+    assert_eq!(window.native_properties().title, "New Window");
+  }
+
+  #[test]
+  fn attach_container_sets_parent_reference() {
+    let state = three_children_wm_state();
+    let monitor = state.monitors()[0].clone();
+    let workspace = monitor.workspaces()[0].clone();
+
+    let split = workspace
+      .children()
+      .into_iter()
+      .next()
+      .and_then(|c| c.as_split().cloned())
+      .expect("Expected split");
+
+    let new_window = create_detached_window("New Window");
+
+    attach_container(&new_window, &split.clone().into(), None).unwrap();
+
+    let parent = new_window.parent().expect("Should have parent");
+    assert_eq!(parent.id(), split.id());
+  }
+
+  #[test]
+  fn attach_container_adds_to_child_focus_order() {
+    let state = three_children_wm_state();
+    let monitor = state.monitors()[0].clone();
+    let workspace = monitor.workspaces()[0].clone();
+
+    let split = workspace
+      .children()
+      .into_iter()
+      .next()
+      .and_then(|c| c.as_split().cloned())
+      .expect("Expected split");
+
+    let new_window = create_detached_window("New Window");
+
+    attach_container(&new_window, &split.clone().into(), None).unwrap();
+
+    let focus_order = split.borrow_child_focus_order().clone();
+    assert!(focus_order.into_iter().any(|id| id == new_window.id()));
+  }
+
+  #[test]
+  fn attach_container_resizes_tiling_window() {
+    let state = three_children_wm_state();
+    let monitor = state.monitors()[0].clone();
+    let workspace = monitor.workspaces()[0].clone();
+
+    let split = workspace
+      .children()
+      .into_iter()
+      .next()
+      .and_then(|c| c.as_split().cloned())
+      .expect("Expected split");
+
+    let new_window = create_detached_window("New Window");
+
+    attach_container(&new_window, &split.clone().into(), None).unwrap();
+
+    let tiling_window = new_window.as_tiling_window().unwrap();
+    assert!(tiling_window.tiling_size() > 0.0);
+    assert!(tiling_window.tiling_size() < 1.0);
+  }
+
+  #[test]
+  fn attach_container_fails_if_already_attached() {
+    let state = three_children_wm_state();
+    let monitor = state.monitors()[0].clone();
+    let workspace = monitor.workspaces()[0].clone();
+
+    let split = workspace
+      .children()
+      .into_iter()
+      .next()
+      .and_then(|c| c.as_split().cloned())
+      .expect("Expected split");
+
+    let children = split.children();
+    let attached_window = children.into_iter().next().unwrap();
+
+    let result =
+      attach_container(&attached_window, &split.clone().into(), None);
+
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("already attached"));
+  }
+
+  #[test]
+  fn attach_container_to_empty_split_sets_full_size() {
+    let empty_split = SplitContainer::new(
+      TilingDirection::Horizontal,
+      GapsConfig::default(),
+    );
+
+    let new_window = create_detached_window("New Window");
+
+    attach_container(&new_window, &empty_split.clone().into(), None)
+      .unwrap();
+
+    let tiling_window = new_window.as_tiling_window().unwrap();
+    assert!((tiling_window.tiling_size() - 1.0).abs() < f32::EPSILON);
+  }
+}
