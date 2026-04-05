@@ -710,3 +710,161 @@ impl Drop for WmState {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use crate::{models::WorkspaceTarget, tests::TestWmStateBuilder};
+
+  #[test]
+  fn workspace_by_target_name_returns_existing_workspace() {
+    let (state, config) = TestWmStateBuilder::new()
+      .with_monitor("DP-1")
+      .with_workspace("1")
+      .with_tiling_window("W1")
+      .with_workspace("2")
+      .with_tiling_window("W2")
+      .build();
+
+    let monitor = state.monitors().into_iter().next().unwrap();
+    let workspace1 = monitor.workspaces().into_iter().next().unwrap();
+
+    let (name, ws) = state
+      .workspace_by_target(
+        &workspace1,
+        WorkspaceTarget::Name("2".to_string()),
+        &config,
+      )
+      .unwrap();
+
+    assert_eq!(name, Some("2".to_string()));
+    assert!(ws.is_some());
+    assert_eq!(ws.unwrap().config().name, "2");
+  }
+
+  #[test]
+  fn workspace_by_target_name_returns_none_for_same_workspace() {
+    let (state, config) = TestWmStateBuilder::new()
+      .with_monitor("DP-1")
+      .with_workspace("1")
+      .with_tiling_window("W1")
+      .build();
+
+    let monitor = state.monitors().into_iter().next().unwrap();
+    let workspace1 = monitor.workspaces().into_iter().next().unwrap();
+
+    let (name, ws) = state
+      .workspace_by_target(
+        &workspace1,
+        WorkspaceTarget::Name("1".to_string()),
+        &config,
+      )
+      .unwrap();
+
+    // By default toggle_workspace_on_refocus is true, but since no recent
+    // workspace, it returns (None, None)
+    assert_eq!(name, None);
+    assert!(ws.is_none());
+  }
+
+  #[test]
+  fn workspace_by_target_next_active_cycles_forward() {
+    let (state, config) = TestWmStateBuilder::new()
+      .with_monitor("DP-1")
+      .with_workspace("1")
+      .with_tiling_window("W1")
+      .with_workspace("2")
+      .with_tiling_window("W2")
+      .build();
+
+    let monitor = state.monitors().into_iter().next().unwrap();
+    let ws_vec: Vec<_> = monitor.workspaces().into_iter().collect();
+    let first_ws = &ws_vec[0];
+
+    let (name, ws) = state
+      .workspace_by_target(first_ws, WorkspaceTarget::NextActive, &config)
+      .unwrap();
+
+    assert_eq!(name, Some("2".to_string()));
+    assert!(ws.is_some());
+    assert_eq!(ws.unwrap().config().name, "2");
+  }
+
+  #[test]
+  fn workspace_by_target_next_active_wraps_at_end() {
+    let (state, config) = TestWmStateBuilder::new()
+      .with_monitor("DP-1")
+      .with_workspace("1")
+      .with_tiling_window("W1")
+      .with_workspace("2")
+      .with_tiling_window("W2")
+      .build();
+
+    let monitor = state.monitors().into_iter().next().unwrap();
+    let ws_vec: Vec<_> = monitor.workspaces().into_iter().collect();
+    let second_ws = &ws_vec[1];
+
+    let (name, ws) = state
+      .workspace_by_target(second_ws, WorkspaceTarget::NextActive, &config)
+      .unwrap();
+
+    // Should wrap to first workspace
+    assert_eq!(name, Some("1".to_string()));
+    assert!(ws.is_some());
+    assert_eq!(ws.unwrap().config().name, "1");
+  }
+
+  #[test]
+  fn workspace_by_target_previous_active_cycles_backward() {
+    let (state, config) = TestWmStateBuilder::new()
+      .with_monitor("DP-1")
+      .with_workspace("1")
+      .with_tiling_window("W1")
+      .with_workspace("2")
+      .with_tiling_window("W2")
+      .build();
+
+    let monitor = state.monitors().into_iter().next().unwrap();
+    let ws_vec: Vec<_> = monitor.workspaces().into_iter().collect();
+    let second_ws = &ws_vec[1];
+
+    let (name, ws) = state
+      .workspace_by_target(
+        second_ws,
+        WorkspaceTarget::PreviousActive,
+        &config,
+      )
+      .unwrap();
+
+    assert_eq!(name, Some("1".to_string()));
+    assert!(ws.is_some());
+    assert_eq!(ws.unwrap().config().name, "1");
+  }
+
+  #[test]
+  fn workspace_by_target_previous_active_wraps_at_start() {
+    let (state, config) = TestWmStateBuilder::new()
+      .with_monitor("DP-1")
+      .with_workspace("1")
+      .with_tiling_window("W1")
+      .with_workspace("2")
+      .with_tiling_window("W2")
+      .build();
+
+    let monitor = state.monitors().into_iter().next().unwrap();
+    let ws_vec: Vec<_> = monitor.workspaces().into_iter().collect();
+    let first_ws = &ws_vec[0];
+
+    let (name, ws) = state
+      .workspace_by_target(
+        first_ws,
+        WorkspaceTarget::PreviousActive,
+        &config,
+      )
+      .unwrap();
+
+    // Should wrap to last workspace
+    assert_eq!(name, Some("2".to_string()));
+    assert!(ws.is_some());
+    assert_eq!(ws.unwrap().config().name, "2");
+  }
+}
