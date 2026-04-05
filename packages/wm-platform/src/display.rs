@@ -91,6 +91,17 @@ pub struct Display {
   pub(crate) inner: platform_impl::Display,
 }
 
+#[cfg(test)]
+impl Display {
+  #[doc(hidden)]
+  #[must_use]
+  pub fn new_test() -> Self {
+    Self {
+      inner: platform_impl::Display::new(0),
+    }
+  }
+}
+
 impl Display {
   #[doc(hidden)]
   #[must_use]

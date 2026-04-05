@@ -435,6 +435,17 @@ pub struct NativeWindow {
   pub(crate) inner: platform_impl::NativeWindow,
 }
 
+#[cfg(test)]
+impl NativeWindow {
+  #[doc(hidden)]
+  #[must_use]
+  pub fn new_test() -> Self {
+    Self {
+      inner: platform_impl::NativeWindow::new(0),
+    }
+  }
+}
+
 impl NativeWindow {
   #[doc(hidden)]
   #[must_use]
