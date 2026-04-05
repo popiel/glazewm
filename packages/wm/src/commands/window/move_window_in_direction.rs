@@ -524,3 +524,68 @@ fn snap_to_monitor_edge(
 
   window_pos.translate_to_coordinates(x, y)
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn snap_to_monitor_edge_up() {
+    let window_pos = Rect::from_xy(100, 200, 50, 30);
+    let monitor_rect = Rect::from_xy(0, 0, 1920, 1080);
+
+    let result =
+      snap_to_monitor_edge(&window_pos, &monitor_rect, &Direction::Up);
+
+    assert_eq!(result.x(), 100);
+    assert_eq!(result.y(), 0);
+  }
+
+  #[test]
+  fn snap_to_monitor_edge_down() {
+    let window_pos = Rect::from_xy(100, 200, 50, 30);
+    let monitor_rect = Rect::from_xy(0, 0, 1920, 1080);
+
+    let result =
+      snap_to_monitor_edge(&window_pos, &monitor_rect, &Direction::Down);
+
+    assert_eq!(result.x(), 100);
+    assert_eq!(result.y(), 1080 - 30);
+  }
+
+  #[test]
+  fn snap_to_monitor_edge_left() {
+    let window_pos = Rect::from_xy(100, 200, 50, 30);
+    let monitor_rect = Rect::from_xy(0, 0, 1920, 1080);
+
+    let result =
+      snap_to_monitor_edge(&window_pos, &monitor_rect, &Direction::Left);
+
+    assert_eq!(result.x(), 0);
+    assert_eq!(result.y(), 200);
+  }
+
+  #[test]
+  fn snap_to_monitor_edge_right() {
+    let window_pos = Rect::from_xy(100, 200, 50, 30);
+    let monitor_rect = Rect::from_xy(0, 0, 1920, 1080);
+
+    let result =
+      snap_to_monitor_edge(&window_pos, &monitor_rect, &Direction::Right);
+
+    assert_eq!(result.x(), 1920 - 50);
+    assert_eq!(result.y(), 200);
+  }
+
+  #[test]
+  fn snap_to_monitor_edge_preserves_dimensions() {
+    let window_pos = Rect::from_xy(100, 200, 80, 60);
+    let monitor_rect = Rect::from_xy(0, 0, 1920, 1080);
+
+    let result =
+      snap_to_monitor_edge(&window_pos, &monitor_rect, &Direction::Down);
+
+    assert_eq!(result.width(), 80);
+    assert_eq!(result.height(), 60);
+  }
+}
