@@ -6,6 +6,8 @@ use std::{
 
 use anyhow::Context;
 use uuid::Uuid;
+#[cfg(test)]
+use wm_common::FloatingStateConfig;
 use wm_common::{
   ActiveDrag, ContainerDto, DisplayState, GapsConfig, WindowDto,
   WindowRuleConfig, WindowState,
@@ -79,6 +81,65 @@ impl NonTilingWindow {
     };
 
     Self(Rc::new(RefCell::new(window)))
+  }
+
+  #[cfg(test)]
+  #[must_use]
+  pub fn new_test_floating(title: &str) -> Self {
+    Self::new(
+      None,
+      NativeWindow::new_test(),
+      NativeWindowProperties::new_test(title, "test_process"),
+      WindowState::Floating(FloatingStateConfig::default()),
+      None,
+      RectDelta::zero(),
+      None,
+      Rect::from_xy(100, 100, 800, 600),
+      false,
+      Vec::new(),
+      None,
+    )
+  }
+
+  #[cfg(test)]
+  #[must_use]
+  pub fn new_test_minimized(title: &str) -> Self {
+    Self::new(
+      None,
+      NativeWindow::new_test(),
+      NativeWindowProperties::new_test(title, "test_process"),
+      WindowState::Minimized,
+      None,
+      RectDelta::zero(),
+      None,
+      Rect::from_xy(100, 100, 800, 600),
+      false,
+      Vec::new(),
+      None,
+    )
+  }
+
+  #[cfg(test)]
+  #[must_use]
+  pub fn new_test_titled(
+    id: Option<Uuid>,
+    title: &str,
+    state: WindowState,
+    floating_placement: Rect,
+  ) -> Self {
+    Self::new(
+      id,
+      NativeWindow::new_test(),
+      NativeWindowProperties::new_test(title, "test_process"),
+      state,
+      None,
+      RectDelta::zero(),
+      None,
+      floating_placement,
+      false,
+      Vec::new(),
+      None,
+    )
   }
 
   pub fn insertion_target(&self) -> Option<InsertionTarget> {

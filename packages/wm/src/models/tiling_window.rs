@@ -87,6 +87,44 @@ impl TilingWindow {
     Self(Rc::new(RefCell::new(window)))
   }
 
+  #[cfg(test)]
+  #[must_use]
+  pub fn new_test(title: &str) -> Self {
+    Self::new(
+      None,
+      NativeWindow::new_test(),
+      NativeWindowProperties::new_test(title, "test_process"),
+      None,
+      RectDelta::zero(),
+      Rect::from_xy(0, 0, 800, 600),
+      false,
+      GapsConfig::default(),
+      Vec::new(),
+      None,
+    )
+  }
+
+  #[cfg(test)]
+  #[must_use]
+  pub fn new_test_titled(
+    id: Option<Uuid>,
+    title: &str,
+    gaps_config: GapsConfig,
+  ) -> Self {
+    Self::new(
+      id,
+      NativeWindow::new_test(),
+      NativeWindowProperties::new_test(title, "test_process"),
+      None,
+      RectDelta::zero(),
+      Rect::from_xy(0, 0, 800, 600),
+      false,
+      gaps_config,
+      Vec::new(),
+      None,
+    )
+  }
+
   pub fn to_non_tiling(
     &self,
     state: WindowState,

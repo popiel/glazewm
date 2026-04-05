@@ -47,6 +47,21 @@ impl Monitor {
     Self(Rc::new(RefCell::new(monitor)))
   }
 
+  #[cfg(test)]
+  #[must_use]
+  pub fn new_test(native_properties: NativeMonitorProperties) -> Self {
+    let monitor = MonitorInner {
+      id: Uuid::new_v4(),
+      parent: None,
+      children: VecDeque::new(),
+      child_focus_order: VecDeque::new(),
+      native: Display::new_test(),
+      native_properties,
+    };
+
+    Self(Rc::new(RefCell::new(monitor)))
+  }
+
   pub fn native(&self) -> Display {
     self.0.borrow().native.clone()
   }

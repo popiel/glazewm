@@ -16,6 +16,25 @@ pub struct NativeWindowProperties {
   pub shadow_borders: RectDelta,
 }
 
+impl NativeWindowProperties {
+  #[cfg(test)]
+  #[must_use]
+  pub fn new_test(title: &str, process_name: &str) -> Self {
+    Self {
+      title: title.to_string(),
+      #[cfg(target_os = "windows")]
+      class_name: "TestClass".to_string(),
+      process_name: process_name.to_string(),
+      frame: Rect::from_xy(0, 0, 800, 600),
+      is_minimized: false,
+      is_maximized: false,
+      is_resizable: true,
+      #[cfg(target_os = "windows")]
+      shadow_borders: RectDelta::zero(),
+    }
+  }
+}
+
 impl TryFrom<&NativeWindow> for NativeWindowProperties {
   type Error = anyhow::Error;
 
