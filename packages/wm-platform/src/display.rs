@@ -92,6 +92,20 @@ pub struct Display {
 }
 
 impl Display {
+  #[doc(hidden)]
+  #[must_use]
+  #[cfg_attr(target_os = "macos", allow(invalid_value))]
+  pub fn new_test() -> Self {
+    Self {
+      #[cfg(target_os = "windows")]
+      inner: platform_impl::Display::new(0),
+      #[cfg(target_os = "macos")]
+      inner: unsafe { std::mem::zeroed() },
+    }
+  }
+}
+
+impl Display {
   /// Gets the unique identifier for this display.
   #[must_use]
   pub fn id(&self) -> DisplayId {

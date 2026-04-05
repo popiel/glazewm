@@ -436,6 +436,20 @@ pub struct NativeWindow {
 }
 
 impl NativeWindow {
+  #[doc(hidden)]
+  #[must_use]
+  #[cfg_attr(target_os = "macos", allow(invalid_value))]
+  pub fn new_test() -> Self {
+    Self {
+      #[cfg(target_os = "windows")]
+      inner: platform_impl::NativeWindow::new(0),
+      #[cfg(target_os = "macos")]
+      inner: unsafe { std::mem::zeroed() },
+    }
+  }
+}
+
+impl NativeWindow {
   /// Gets the unique identifier for this window.
   #[must_use]
   pub fn id(&self) -> WindowId {
