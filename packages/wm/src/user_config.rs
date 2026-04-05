@@ -57,6 +57,19 @@ impl UserConfig {
     })
   }
 
+  #[cfg(test)]
+  #[allow(dead_code)]
+  #[must_use]
+  pub fn new_test(parsed: ParsedConfig) -> Self {
+    let window_rules_by_event = Self::window_rules_by_event(&parsed);
+    Self {
+      path: PathBuf::new(),
+      value: parsed,
+      value_str: String::new(),
+      window_rules_by_event,
+    }
+  }
+
   /// Reads and validates the user config from the given path.
   ///
   /// Creates a new config file from sample if it doesn't exist.
