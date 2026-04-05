@@ -435,6 +435,21 @@ pub struct NativeWindow {
   pub(crate) inner: platform_impl::NativeWindow,
 }
 
+#[cfg(feature = "test_utils")]
+impl NativeWindow {
+  /// Creates a mock `NativeWindow` for testing purposes.
+  #[must_use]
+  #[cfg_attr(target_os = "macos", allow(invalid_value))]
+  pub fn mock() -> Self {
+    Self {
+      #[cfg(target_os = "windows")]
+      inner: platform_impl::NativeWindow::new(0),
+      #[cfg(target_os = "macos")]
+      inner: unsafe { std::mem::zeroed() },
+    }
+  }
+}
+
 impl NativeWindow {
   /// Gets the unique identifier for this window.
   #[must_use]

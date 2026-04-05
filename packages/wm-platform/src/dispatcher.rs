@@ -350,6 +350,19 @@ impl Dispatcher {
     Self { source, stopped }
   }
 
+  /// Creates a mock `Dispatcher` for testing purposes.
+  ///
+  /// This creates a dispatcher with no event loop source, suitable for
+  /// unit tests that don't need actual platform event loop functionality.
+  #[cfg(feature = "test_utils")]
+  #[must_use]
+  pub fn mock() -> Self {
+    Self {
+      source: None,
+      stopped: Arc::new(AtomicBool::new(false)),
+    }
+  }
+
   /// Stops the event loop gracefully from any thread.
   ///
   /// After calling this method, all subsequent calls to `dispatch_async()`
