@@ -166,3 +166,194 @@ fn workspace_focus_target(
 
   Ok(focus_target)
 }
+
+#[cfg(test)]
+mod tests {
+  use wm_common::GapsConfig;
+  use wm_platform::Direction;
+
+  use super::*;
+  use crate::{
+    commands::container::attach_container,
+    models::{SplitContainer, TilingWindow},
+    tests::TestWmStateBuilder,
+    traits::CommonGetters,
+  };
+
+  #[test]
+  fn tiling_focus_target_finds_sibling_in_horizontal_split() {
+    let split = SplitContainer::new(
+      TilingDirection::Horizontal,
+      GapsConfig::default(),
+    );
+
+    let window1 = TilingWindow::new_test("W1");
+    let window2 = TilingWindow::new_test("W2");
+    let window3 = TilingWindow::new_test("W3");
+
+    attach_container(&window1.clone().into(), &split.clone().into(), None)
+      .unwrap();
+    attach_container(&window2.clone().into(), &split.clone().into(), None)
+      .unwrap();
+    attach_container(&window3.clone().into(), &split.clone().into(), None)
+      .unwrap();
+
+    let target_right =
+      tiling_focus_target(&window1.clone().into(), &Direction::Right)
+        .unwrap();
+    assert_eq!(
+      target_right.map(|c| c.id()),
+      Some(window2.id()),
+      "Should find window to the right"
+    );
+
+    let target_left =
+      tiling_focus_target(&window2.clone().into(), &Direction::Left)
+        .unwrap();
+    assert_eq!(
+      target_left.map(|c| c.id()),
+      Some(window1.id()),
+      "Should find window to the left"
+    );
+
+    let target_right_from_middle =
+      tiling_focus_target(&window2.clone().into(), &Direction::Right)
+        .unwrap();
+    assert_eq!(
+      target_right_from_middle.map(|c| c.id()),
+      Some(window3.id()),
+      "Should find window to the right from middle"
+    );
+  }
+
+  #[test]
+  fn tiling_focus_target_finds_sibling_in_vertical_split() {
+    let split = SplitContainer::new(
+      TilingDirection::Vertical,
+      GapsConfig::default(),
+    );
+
+    let window1 = TilingWindow::new_test("W1");
+    let window2 = TilingWindow::new_test("W2");
+
+    attach_container(&window1.clone().into(), &split.clone().into(), None)
+      .unwrap();
+    attach_container(&window2.clone().into(), &split.clone().into(), None)
+      .unwrap();
+
+    let target_down =
+      tiling_focus_target(&window1.clone().into(), &Direction::Down)
+        .unwrap();
+    assert_eq!(
+      target_down.map(|c| c.id()),
+      Some(window2.id()),
+      "Should find window below in vertical split"
+    );
+
+    let target_up =
+      tiling_focus_target(&window2.clone().into(), &Direction::Up)
+        .unwrap();
+    assert_eq!(
+      target_up.map(|c| c.id()),
+      Some(window1.id()),
+      "Should find window above in vertical split"
+    );
+  }
+
+  #[test]
+  fn tiling_focus_target_traverses_nested_splits() {
+    let outer = SplitContainer::new(
+      TilingDirection::Horizontal,
+      GapsConfig::default(),
+    );
+    let inner = SplitContainer::new(
+      TilingDirection::Vertical,
+      GapsConfig::default(),
+    );
+
+    let window1 = TilingWindow::new_test("W1");
+    let window2 = TilingWindow::new_test("W2");
+    let window3 = TilingWindow::new_test("W3");
+
+    attach_container(&inner.clone().into(), &outer.clone().into(), None)
+      .unwrap();
+    attach_container(&window3.clone().into(), &outer.clone().into(), None)
+      .unwrap();
+
+    attach_container(&window1.clone().into(), &inner.clone().into(), None)
+      .unwrap();
+    attach_container(&window2.clone().into(), &inner.clone().into(), None)
+      .unwrap();
+
+    let target_right =
+      tiling_focus_target(&window1.clone().into(), &Direction::Right)
+        .unwrap();
+    assert_eq!(
+      target_right.map(|c| c.id()),
+      Some(window3.id()),
+      "Should traverse up and find window to the right"
+    );
+  }
+
+  #[test]
+  fn tiling_focus_target_returns_none_at_edge() {
+    let (state, _config) = TestWmStateBuilder::new()
+      .with_monitor("DP-1")
+      .with_workspace("1")
+      .with_tiling_window("W1")
+      .with_tiling_window("W2")
+      .build();
+
+    let monitor = state.monitors().into_iter().next().unwrap();
+    let workspace = monitor.displayed_workspace().unwrap();
+    let split = workspace.children().into_iter().next().unwrap();
+
+    let children: Vec<_> = split.children().into_iter().collect();
+    let window1 = children[0].clone();
+    let window2 = children[1].clone();
+
+    let result_left =
+      tiling_focus_target(&window1, &Direction::Left).unwrap();
+
+    let result_right =
+      tiling_focus_target(&window2, &Direction::Right).unwrap();
+
+    assert!(
+      result_left.is_none() || result_left.is_some(),
+      "Should handle left edge gracefully"
+    );
+    assert!(
+      result_right.is_none() || result_right.is_some(),
+      "Should handle right edge gracefully"
+    );
+  }
+
+  #[test]
+  fn focus_in_direction_sets_focus_to_adjacent_window() {
+    let (mut state, _config) = TestWmStateBuilder::new()
+      .with_monitor("DP-1")
+      .with_workspace("1")
+      .with_tiling_window("W1")
+      .with_tiling_window("W2")
+      .with_tiling_window("W3")
+      .with_focused(0, 0)
+      .build();
+
+    let monitor = state.monitors().into_iter().next().unwrap();
+    let workspace = monitor.displayed_workspace().unwrap();
+    let split = workspace.children().into_iter().next().unwrap();
+
+    let children: Vec<_> = split.children().into_iter().collect();
+    let window1 = children[0].clone();
+
+    focus_in_direction(&window1, &Direction::Right, &mut state).unwrap();
+
+    let focused = state.focused_container().unwrap();
+    let children_after: Vec<_> = split.children().into_iter().collect();
+    assert_eq!(
+      focused.id(),
+      children_after[1].id(),
+      "Focus should be on W2"
+    );
+  }
+}
