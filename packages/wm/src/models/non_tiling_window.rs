@@ -10,7 +10,7 @@ use wm_common::{
   ActiveDrag, ContainerDto, DisplayState, GapsConfig, WindowDto,
   WindowRuleConfig, WindowState,
 };
-use wm_platform::{NativeWindow, Rect, RectDelta};
+use wm_platform::{NativeWindowImpl, Rect, RectDelta};
 
 use crate::{
   impl_common_getters, impl_container_debug, impl_window_getters,
@@ -30,7 +30,7 @@ struct NonTilingWindowInner {
   parent: Option<Container>,
   children: VecDeque<Container>,
   child_focus_order: VecDeque<Uuid>,
-  native: NativeWindow,
+  native: NativeWindowImpl,
   native_properties: NativeWindowProperties,
   state: WindowState,
   prev_state: Option<WindowState>,
@@ -48,7 +48,7 @@ impl NonTilingWindow {
   #[allow(clippy::too_many_arguments)]
   pub fn new(
     id: Option<Uuid>,
-    native: NativeWindow,
+    native: NativeWindowImpl,
     properties: NativeWindowProperties,
     state: WindowState,
     prev_state: Option<WindowState>,

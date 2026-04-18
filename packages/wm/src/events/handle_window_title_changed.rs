@@ -1,6 +1,6 @@
 use tracing::info;
 use wm_common::{try_warn, WindowRuleEvent};
-use wm_platform::NativeWindow;
+use wm_platform::NativeWindowImpl;
 
 use crate::{
   commands::window::run_window_rules, traits::WindowGetters,
@@ -8,7 +8,7 @@ use crate::{
 };
 
 pub fn handle_window_title_changed(
-  native_window: &NativeWindow,
+  native_window: &NativeWindowImpl,
   state: &mut WmState,
   config: &mut UserConfig,
 ) -> anyhow::Result<()> {

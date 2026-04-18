@@ -7,7 +7,7 @@ use wm_common::{
 use wm_platform::NativeWindowWindowsExt;
 #[cfg(target_os = "macos")]
 use wm_platform::{LengthValue, MouseButton, RectDelta};
-use wm_platform::{NativeWindow, Rect};
+use wm_platform::{NativeWindowImpl, Rect};
 
 use crate::{
   commands::{
@@ -23,7 +23,7 @@ use crate::{
 
 #[allow(clippy::too_many_lines)]
 pub fn handle_window_moved_or_resized(
-  native_window: &NativeWindow,
+  native_window: &NativeWindowImpl,
   // LINT: `is_interactive_start` is only used on Windows.
   #[cfg_attr(not(target_os = "windows"), allow(unused_variables))]
   is_interactive_start: bool,

@@ -1,7 +1,7 @@
 use anyhow::Context;
 use tracing::info;
 use wm_common::{try_warn, WindowRuleEvent, WindowState, WmEvent};
-use wm_platform::{NativeWindow, RectDelta};
+use wm_platform::{NativeWindowImpl, RectDelta};
 
 use crate::{
   commands::{
@@ -18,7 +18,7 @@ use crate::{
 };
 
 pub fn manage_window(
-  native_window: NativeWindow,
+  native_window: NativeWindowImpl,
   target_parent: Option<Container>,
   state: &mut WmState,
   config: &mut UserConfig,
@@ -89,7 +89,7 @@ pub fn manage_window(
 /// Returns `Ok(Some(properties))` if the window is manageable and its
 /// properties were retrieved successfully.
 fn check_is_manageable(
-  native_window: &NativeWindow,
+  native_window: &NativeWindowImpl,
 ) -> anyhow::Result<Option<NativeWindowProperties>> {
   if !native_window.is_visible()? {
     return Ok(None);
@@ -151,7 +151,7 @@ fn check_is_manageable(
 }
 
 fn create_window(
-  native_window: NativeWindow,
+  native_window: NativeWindowImpl,
   native_properties: NativeWindowProperties,
   target_parent: Option<Container>,
   state: &mut WmState,

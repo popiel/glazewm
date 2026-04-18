@@ -744,16 +744,16 @@ impl PartialEq for NativeWindow {
 
 impl Eq for NativeWindow {}
 
-impl From<NativeWindow> for crate::NativeWindow {
+impl From<NativeWindow> for crate::NativeWindowImpl {
   fn from(window: NativeWindow) -> Self {
-    crate::NativeWindow { inner: window }
+    crate::NativeWindowImpl { inner: window }
   }
 }
 
 /// Implements [`Dispatcher::visible_windows`].
 pub(crate) fn visible_windows(
   _: &Dispatcher,
-) -> crate::Result<Vec<crate::NativeWindow>> {
+) -> crate::Result<Vec<crate::NativeWindowImpl>> {
   let mut handles: Vec<isize> = Vec::new();
 
   #[allow(clippy::items_after_statements)]
@@ -787,7 +787,7 @@ pub(crate) fn visible_windows(
 #[allow(clippy::unnecessary_wraps)]
 pub(crate) fn focused_window(
   _: &Dispatcher,
-) -> crate::Result<crate::NativeWindow> {
+) -> crate::Result<crate::NativeWindowImpl> {
   let handle = unsafe { GetForegroundWindow() };
   Ok(NativeWindow::new(handle.0).into())
 }
@@ -797,7 +797,7 @@ pub(crate) fn focused_window(
 pub(crate) fn window_from_point(
   point: &Point,
   _: &Dispatcher,
-) -> crate::Result<Option<crate::NativeWindow>> {
+) -> crate::Result<Option<crate::NativeWindowImpl>> {
   let point = POINT {
     x: point.x,
     y: point.y,

@@ -1,6 +1,6 @@
 use tracing::info;
 use wm_common::{DisplayState, HideMethod};
-use wm_platform::NativeWindow;
+use wm_platform::NativeWindowImpl;
 
 use crate::{
   commands::window::manage_window, traits::WindowGetters,
@@ -8,7 +8,7 @@ use crate::{
 };
 
 pub fn handle_window_shown(
-  native_window: NativeWindow,
+  native_window: NativeWindowImpl,
   state: &mut WmState,
   config: &mut UserConfig,
 ) -> anyhow::Result<()> {

@@ -1,4 +1,4 @@
-use super::NativeWindow;
+use super::NativeWindowImpl;
 use crate::{
   platform_impl::WindowEventNotificationInner, Keybinding, MouseEventKind,
   Point, WindowId,
@@ -16,13 +16,13 @@ pub enum PlatformEvent {
 pub enum WindowEvent {
   /// Window gained focus.
   Focused {
-    window: NativeWindow,
+    window: NativeWindowImpl,
     notification: WindowEventNotification,
   },
 
   /// Window was hidden.
   Hidden {
-    window: NativeWindow,
+    window: NativeWindowImpl,
     notification: WindowEventNotification,
   },
 
@@ -40,7 +40,7 @@ pub enum WindowEvent {
   ///   The `is_interactive_start` and `is_interactive_end` flags are
   ///   always `false`.
   MovedOrResized {
-    window: NativeWindow,
+    window: NativeWindowImpl,
     is_interactive_start: bool,
     is_interactive_end: bool,
     notification: WindowEventNotification,
@@ -48,25 +48,25 @@ pub enum WindowEvent {
 
   /// Window was minimized.
   Minimized {
-    window: NativeWindow,
+    window: NativeWindowImpl,
     notification: WindowEventNotification,
   },
 
   /// Window was restored from minimized state.
   MinimizeEnded {
-    window: NativeWindow,
+    window: NativeWindowImpl,
     notification: WindowEventNotification,
   },
 
   /// Window became visible.
   Shown {
-    window: NativeWindow,
+    window: NativeWindowImpl,
     notification: WindowEventNotification,
   },
 
   /// Window title changed.
   TitleChanged {
-    window: NativeWindow,
+    window: NativeWindowImpl,
     notification: WindowEventNotification,
   },
 
@@ -81,7 +81,7 @@ impl WindowEvent {
   /// Get the window handle if available (not available for
   /// `WindowEvent::Destroyed`).
   #[must_use]
-  pub fn window(&self) -> Option<&NativeWindow> {
+  pub fn window(&self) -> Option<&NativeWindowImpl> {
     match self {
       Self::Focused { window, .. }
       | Self::Hidden { window, .. }

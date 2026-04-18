@@ -55,8 +55,10 @@ pub enum WindowZOrder {
 }
 
 /// macOS-specific extension trait for [`NativeWindow`].
+///
+/// This trait is dyn-compatible.
 #[cfg(target_os = "macos")]
-pub trait NativeWindowExtMacOs {
+pub trait NativeWindowExtMacOs: Send + Sync {
   /// Gets the `AXUIElement` instance for this window.
   ///
   /// # Platform-specific
@@ -101,7 +103,7 @@ pub trait NativeWindowExtMacOs {
 }
 
 #[cfg(target_os = "macos")]
-impl NativeWindowExtMacOs for NativeWindow {
+impl NativeWindowExtMacOs for NativeWindowImpl {
   fn ax_ui_element(&self) -> &ThreadBound<CFRetained<AXUIElement>> {
     &self.inner.element
   }
@@ -140,14 +142,18 @@ impl NativeWindowExtMacOs for NativeWindow {
 }
 
 /// Windows-specific extensions for [`NativeWindow`].
+///
+/// This trait is dyn-compatible.
 #[cfg(target_os = "windows")]
-pub trait NativeWindowWindowsExt {
-  /// Creates a [`NativeWindow`] from a window handle.
+pub trait NativeWindowWindowsExt: Send + Sync {
+  /// Creates a [`NativeWindowImpl`] from a window handle.
   ///
   /// # Platform-specific
   ///
   /// This method is only available on Windows.
-  fn from_handle(handle: isize) -> NativeWindow;
+  fn from_handle(handle: isize) -> NativeWindowImpl
+  where
+    Self: Sized;
 
   /// Gets the window handle.
   ///
@@ -326,7 +332,7 @@ pub trait NativeWindowWindowsExt {
 }
 
 #[cfg(target_os = "windows")]
-impl NativeWindowWindowsExt for NativeWindow {
+impl NativeWindowWindowsExt for NativeWindowImpl {
   fn from_handle(handle: isize) -> Self {
     platform_impl::NativeWindow::new(handle).into()
   }
@@ -430,12 +436,132 @@ impl NativeWindowWindowsExt for NativeWindow {
   }
 }
 
+/// Main trait for window operations.
+///
+/// This trait is dyn-compatible and can be used with `dyn NativeWindow`.
+pub trait NativeWindow: Send + Sync {
+  /// Gets the unique identifier for this window.
+  fn id(&self) -> WindowId;
+
+  /// Gets the window's title.
+  ///
+  /// Note that empty strings are valid window titles.
+  ///
+  /// # Errors
+  ///
+  /// Returns [`Error::WindowNotFound`] if the window is invalid.
+  fn title(&self) -> crate::Result<String>;
+
+  /// Gets the process name of the window.
+  fn process_name(&self) -> crate::Result<String>;
+
+  /// Gets a rectangle of the window's size and position.
+  ///
+  /// # Platform-specific
+  ///
+  /// - **Windows**: Includes the window's shadow borders.
+  /// - **macOS**: If the window was previously resized to a value outside
+  ///   of the window's allowed min/max width & height (e.g. via calling
+  ///   `set_frame`), this can return those invalid values and might not
+  ///   reflect the actual window size.
+  fn frame(&self) -> crate::Result<Rect>;
+
+  /// Gets the window's position as (x, y) coordinates.
+  fn position(&self) -> crate::Result<(f64, f64)>;
+
+  /// Gets the window's size as (width, height).
+  fn size(&self) -> crate::Result<(f64, f64)>;
+
+  /// Whether the window is still valid.
+  ///
+  /// Returns `true` if the underlying window is still alive.
+  fn is_valid(&self) -> bool;
+
+  /// Whether the window is actually visible.
+  fn is_visible(&self) -> crate::Result<bool>;
+
+  /// Whether the window is minimized.
+  fn is_minimized(&self) -> crate::Result<bool>;
+
+  /// Whether the window is maximized.
+  fn is_maximized(&self) -> crate::Result<bool>;
+
+  /// Whether the window can be resized.
+  fn is_resizable(&self) -> crate::Result<bool>;
+
+  /// Whether the window is the OS's desktop window.
+  fn is_desktop_window(&self) -> crate::Result<bool>;
+
+  /// Repositions and resizes the window to the specified rectangle.
+  ///
+  /// # Platform-specific
+  ///
+  /// - **Windows**: Automatically adjusts the `rect` prior to calling [`SetWindowPos`](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowpos)
+  ///   to include the window's shadow borders. To set the window's
+  ///   position directly, use [`NativeWindowWindowsExt::set_window_pos`].
+  fn set_frame(&self, rect: &Rect) -> crate::Result<()>;
+
+  /// Resizes the window to the specified size.
+  fn resize(&self, width: i32, height: i32) -> crate::Result<()>;
+
+  /// Repositions the window to the specified position.
+  fn reposition(&self, x: i32, y: i32) -> crate::Result<()>;
+
+  /// Minimizes the window.
+  fn minimize(&self) -> crate::Result<()>;
+
+  /// Maximizes the window.
+  fn maximize(&self) -> crate::Result<()>;
+
+  /// Sets focus to the window and raises it to the top of the z-order.
+  fn focus(&self) -> crate::Result<()>;
+
+  /// Closes the window.
+  ///
+  /// # Platform-specific
+  ///
+  /// - **Windows**: This sends a `WM_CLOSE` message to the window.
+  /// - **macOS**: This simulates pressing the close button on the window's
+  ///   title bar.
+  fn close(&self) -> crate::Result<()>;
+
+  /// Gets the class name of the window.
+  ///
+  /// # Platform-specific
+  ///
+  /// This method is only available on Windows.
+  #[cfg(target_os = "windows")]
+  fn class_name(&self) -> crate::Result<String>;
+
+  /// Gets the delta between the window's frame and the window's border.
+  /// This represents the size of a window's shadow borders.
+  ///
+  /// # Platform-specific
+  ///
+  /// This method is only available on Windows.
+  #[cfg(target_os = "windows")]
+  fn shadow_borders(&self) -> crate::Result<RectDelta>;
+
+  /// Gets the Windows-specific extension.
+  ///
+  /// Returns an error if not on Windows.
+  #[cfg(target_os = "windows")]
+  fn as_windows_ext(&self) -> crate::Result<&dyn NativeWindowWindowsExt>;
+
+  /// Gets the macOS-specific extension.
+  ///
+  /// Returns an error if not on macOS.
+  #[cfg(target_os = "macos")]
+  fn as_macos_ext(&self) -> crate::Result<&dyn NativeWindowExtMacOs>;
+}
+
+/// Concrete implementation of [`NativeWindow`].
 #[derive(Clone, Debug)]
-pub struct NativeWindow {
+pub struct NativeWindowImpl {
   pub(crate) inner: platform_impl::NativeWindow,
 }
 
-impl NativeWindow {
+impl NativeWindowImpl {
   /// Gets the unique identifier for this window.
   #[must_use]
   pub fn id(&self) -> WindowId {
@@ -453,6 +579,7 @@ impl NativeWindow {
     self.inner.title()
   }
 
+  /// Gets the process name of the window.
   pub fn process_name(&self) -> crate::Result<String> {
     self.inner.process_name()
   }
@@ -534,10 +661,12 @@ impl NativeWindow {
     self.inner.reposition(x, y)
   }
 
+  /// Minimizes the window.
   pub fn minimize(&self) -> crate::Result<()> {
     self.inner.minimize()
   }
 
+  /// Maximizes the window.
   pub fn maximize(&self) -> crate::Result<()> {
     self.inner.maximize()
   }
@@ -557,12 +686,124 @@ impl NativeWindow {
   pub fn close(&self) -> crate::Result<()> {
     self.inner.close()
   }
+
+  #[cfg(target_os = "windows")]
+  /// Gets the Windows-specific extension.
+  pub fn as_windows_ext(
+    &self,
+  ) -> crate::Result<&dyn NativeWindowWindowsExt> {
+    Ok(self)
+  }
+
+  #[cfg(target_os = "macos")]
+  /// Gets the macOS-specific extension.
+  pub fn as_macos_ext(&self) -> crate::Result<&dyn NativeWindowExtMacOs> {
+    Ok(self)
+  }
 }
 
-impl PartialEq for NativeWindow {
+impl NativeWindow for NativeWindowImpl {
+  fn id(&self) -> WindowId {
+    NativeWindowImpl::id(self)
+  }
+
+  fn title(&self) -> crate::Result<String> {
+    NativeWindowImpl::title(self)
+  }
+
+  fn process_name(&self) -> crate::Result<String> {
+    NativeWindowImpl::process_name(self)
+  }
+
+  fn frame(&self) -> crate::Result<Rect> {
+    NativeWindowImpl::frame(self)
+  }
+
+  fn position(&self) -> crate::Result<(f64, f64)> {
+    NativeWindowImpl::position(self)
+  }
+
+  fn size(&self) -> crate::Result<(f64, f64)> {
+    NativeWindowImpl::size(self)
+  }
+
+  fn is_valid(&self) -> bool {
+    NativeWindowImpl::is_valid(self)
+  }
+
+  fn is_visible(&self) -> crate::Result<bool> {
+    NativeWindowImpl::is_visible(self)
+  }
+
+  fn is_minimized(&self) -> crate::Result<bool> {
+    NativeWindowImpl::is_minimized(self)
+  }
+
+  fn is_maximized(&self) -> crate::Result<bool> {
+    NativeWindowImpl::is_maximized(self)
+  }
+
+  fn is_resizable(&self) -> crate::Result<bool> {
+    NativeWindowImpl::is_resizable(self)
+  }
+
+  fn is_desktop_window(&self) -> crate::Result<bool> {
+    NativeWindowImpl::is_desktop_window(self)
+  }
+
+  fn set_frame(&self, rect: &Rect) -> crate::Result<()> {
+    NativeWindowImpl::set_frame(self, rect)
+  }
+
+  fn resize(&self, width: i32, height: i32) -> crate::Result<()> {
+    NativeWindowImpl::resize(self, width, height)
+  }
+
+  fn reposition(&self, x: i32, y: i32) -> crate::Result<()> {
+    NativeWindowImpl::reposition(self, x, y)
+  }
+
+  fn minimize(&self) -> crate::Result<()> {
+    NativeWindowImpl::minimize(self)
+  }
+
+  fn maximize(&self) -> crate::Result<()> {
+    NativeWindowImpl::maximize(self)
+  }
+
+  fn focus(&self) -> crate::Result<()> {
+    NativeWindowImpl::focus(self)
+  }
+
+  fn close(&self) -> crate::Result<()> {
+    NativeWindowImpl::close(self)
+  }
+
+  #[cfg(target_os = "windows")]
+  fn class_name(&self) -> crate::Result<String> {
+    self.inner.class_name()
+  }
+
+  #[cfg(target_os = "windows")]
+  fn shadow_borders(&self) -> crate::Result<RectDelta> {
+    self.inner.shadow_borders()
+  }
+
+  #[cfg(target_os = "windows")]
+  fn as_windows_ext(&self) -> crate::Result<&dyn NativeWindowWindowsExt> {
+    NativeWindowImpl::as_windows_ext(self)
+  }
+
+  #[cfg(target_os = "macos")]
+  fn as_macos_ext(&self) -> crate::Result<&dyn NativeWindowExtMacOs> {
+    NativeWindowImpl::as_macos_ext(self)
+  }
+}
+
+impl PartialEq for NativeWindowImpl {
   fn eq(&self, other: &Self) -> bool {
     self.inner.id() == other.inner.id()
   }
 }
 
-impl Eq for NativeWindow {}
+impl Eq for NativeWindowImpl {}

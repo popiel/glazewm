@@ -1,7 +1,7 @@
 use anyhow::Context;
 use tracing::info;
 use wm_common::{DisplayState, WindowRuleEvent, WmEvent};
-use wm_platform::NativeWindow;
+use wm_platform::NativeWindowImpl;
 
 use crate::{
   commands::{
@@ -15,7 +15,7 @@ use crate::{
 };
 
 pub fn handle_window_focused(
-  native_window: &NativeWindow,
+  native_window: &NativeWindowImpl,
   state: &mut WmState,
   config: &mut UserConfig,
 ) -> anyhow::Result<()> {

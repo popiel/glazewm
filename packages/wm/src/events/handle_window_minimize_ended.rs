@@ -1,6 +1,6 @@
 use tracing::info;
 use wm_common::{try_warn, WindowState};
-use wm_platform::NativeWindow;
+use wm_platform::NativeWindowImpl;
 
 use crate::{
   commands::window::update_window_state, traits::WindowGetters,
@@ -8,7 +8,7 @@ use crate::{
 };
 
 pub fn handle_window_minimize_ended(
-  native_window: &NativeWindow,
+  native_window: &NativeWindowImpl,
   state: &mut WmState,
   config: &UserConfig,
 ) -> anyhow::Result<()> {

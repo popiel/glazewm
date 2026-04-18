@@ -6,7 +6,7 @@ use tracing::warn;
 use uuid::Uuid;
 use wm_common::{BindingModeConfig, HideCorner, WindowState, WmEvent};
 use wm_platform::{
-  Direction, Dispatcher, Display, NativeWindow, Point, Rect,
+  Direction, Dispatcher, Display, NativeWindowImpl, Point, Rect,
 };
 #[cfg(target_os = "windows")]
 use wm_platform::{NativeWindowWindowsExt, OpacityValue};
@@ -59,7 +59,7 @@ pub struct WmState {
 
   /// Windows that the WM should ignore. Windows can be added via the
   /// `ignore` command.
-  pub ignored_windows: Vec<NativeWindow>,
+  pub ignored_windows: Vec<NativeWindowImpl>,
 
   /// Whether the WM is paused.
   pub is_paused: bool,
@@ -199,7 +199,7 @@ impl WmState {
   /// Defaults to the first monitor if the nearest monitor is invalid.
   pub fn nearest_monitor(
     &self,
-    native_window: &NativeWindow,
+    native_window: &NativeWindowImpl,
   ) -> Option<Monitor> {
     self
       .monitor_from_native(
@@ -327,10 +327,10 @@ impl WmState {
       .collect()
   }
 
-  /// Gets window that corresponds to the given `NativeWindow`.
+  /// Gets window that corresponds to the given `NativeWindowImpl`.
   pub fn window_from_native(
     &self,
-    native_window: &NativeWindow,
+    native_window: &NativeWindowImpl,
   ) -> Option<WindowContainer> {
     self
       .windows()
@@ -675,7 +675,7 @@ impl WmState {
     }
 
     // Prune ignored windows that are no longer valid.
-    self.ignored_windows.retain(NativeWindow::is_valid);
+    self.ignored_windows.retain(|w| w.is_valid());
 
     Ok(())
   }

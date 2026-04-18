@@ -21,7 +21,7 @@ use crate::{
     ConnectionState, DisplayDeviceId, DisplayId, MirroringState,
     OutputTechnology,
   },
-  Dispatcher, NativeWindow, Point, Rect,
+  Dispatcher, NativeWindowImpl, Point, Rect,
 };
 
 /// Platform-specific implementation of [`Display`].
@@ -421,7 +421,7 @@ pub(crate) fn primary_display(
 /// Implements [`Dispatcher::nearest_display`].
 #[allow(clippy::unnecessary_wraps)]
 pub(crate) fn nearest_display(
-  native_window: &NativeWindow,
+  native_window: &NativeWindowImpl,
   _: &Dispatcher,
 ) -> crate::Result<crate::Display> {
   let handle = unsafe {

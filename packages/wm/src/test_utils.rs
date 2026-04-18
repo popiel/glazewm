@@ -9,7 +9,9 @@ use wm_common::{
   FloatingStateConfig, GapsConfig, TilingDirection, WindowState, WmEvent,
   WorkspaceConfig,
 };
-use wm_platform::{Dispatcher, Display, NativeWindow, Rect, RectDelta};
+use wm_platform::{
+  Dispatcher, Display, NativeWindowImpl, Rect, RectDelta,
+};
 
 use crate::{
   commands::container::attach_container,
@@ -149,7 +151,8 @@ impl NonTilingWindow {
     #[builder(default = mock_window_rect())] floating_placement: Rect,
     #[builder(default = WindowState::Floating(FloatingStateConfig::default()))]
     state: WindowState,
-    #[builder(default = NativeWindow::mock())] native: NativeWindow,
+    #[builder(default = NativeWindowImpl::mock())]
+    native: NativeWindowImpl,
   ) -> Self {
     let properties = NativeWindowProperties::mock()
       .title(title)
@@ -203,7 +206,8 @@ impl TilingWindow {
     #[builder(default = String::new())] process_name: String,
     #[builder(default = mock_window_rect())] floating_placement: Rect,
     #[builder(default = GapsConfig::default())] gaps_config: GapsConfig,
-    #[builder(default = NativeWindow::mock())] native: NativeWindow,
+    #[builder(default = NativeWindowImpl::mock())]
+    native: NativeWindowImpl,
   ) -> Self {
     let properties = NativeWindowProperties::mock()
       .title(title)

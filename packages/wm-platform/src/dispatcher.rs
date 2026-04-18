@@ -49,7 +49,8 @@ use windows::{
 #[cfg(target_os = "macos")]
 use crate::platform_impl::Application;
 use crate::{
-  platform_impl, Display, DisplayDevice, MouseButton, NativeWindow, Point,
+  platform_impl, Display, DisplayDevice, MouseButton, NativeWindow,
+  NativeWindowImpl, Point,
 };
 
 /// Type alias for a closure to be executed by the event loop.
@@ -528,7 +529,7 @@ impl Dispatcher {
   /// frame. Defaults to the primary display if no overlap is found.
   pub fn nearest_display(
     &self,
-    native_window: &NativeWindow,
+    native_window: &NativeWindowImpl,
   ) -> crate::Result<Display> {
     platform_impl::nearest_display(native_window, self)
   }
@@ -537,16 +538,16 @@ impl Dispatcher {
   ///
   /// NOTE: Does not guarantee a specific, consistent order.
   ///
-  /// Returns a vector of `NativeWindow` instances for windows that are
+  /// Returns a vector of `NativeWindowImpl` instances for windows that are
   /// not hidden and on the current virtual desktop.
-  pub fn visible_windows(&self) -> crate::Result<Vec<NativeWindow>> {
+  pub fn visible_windows(&self) -> crate::Result<Vec<NativeWindowImpl>> {
     platform_impl::visible_windows(self)
   }
 
   /// Gets the currently focused (foreground) window.
   ///
   /// This may be the desktop window if no window has focus.
-  pub fn focused_window(&self) -> crate::Result<NativeWindow> {
+  pub fn focused_window(&self) -> crate::Result<NativeWindowImpl> {
     platform_impl::focused_window(self)
   }
 
@@ -607,7 +608,7 @@ impl Dispatcher {
   pub fn window_from_point(
     &self,
     point: &Point,
-  ) -> crate::Result<Option<crate::NativeWindow>> {
+  ) -> crate::Result<Option<NativeWindowImpl>> {
     platform_impl::window_from_point(point, self)
   }
 
