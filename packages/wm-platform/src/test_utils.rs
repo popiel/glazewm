@@ -453,6 +453,21 @@ impl PlatformCall {
 /// instances via `Arc<CallTracker>`. A single tracker can be shared across
 /// multiple mock windows, allowing tests to verify calls across all
 /// windows.
+///
+/// # Why not `mockall`?
+///
+/// `mockall` requires `&mut self` access to set expectations and verify
+/// call counts (via `checkpoint()` and `times()`). When a mock is wrapped
+/// in `Arc<dyn Trait>` — as it must be for window management code that
+/// stores windows as `Arc<dyn NativeWindow>` — there is no way to obtain
+/// `&mut self` through the trait object. See
+/// <https://github.com/asomers/mockall/issues/191> and
+/// <https://github.com/asomers/mockall/issues/385>.
+///
+/// `CallTracker` solves this by using a side-channel: each mock pushes
+/// calls to a shared `Arc<CallTracker>` via `&self`, so no mutable access
+/// to the mock itself is needed. This allows call tracking on mocks that
+/// have been erased behind `Arc<dyn NativeWindow>`.
 #[derive(Debug, Default)]
 pub struct CallTracker {
   calls: std::sync::Mutex<Vec<PlatformCall>>,
@@ -533,8 +548,23 @@ impl CallTracker {
 /// ```
 ///
 /// When `tracker` is `None`, method calls are not recorded. When `tracker`
-/// is `Some`, every method call pushes a [`PlatformCall`] variant to the
+/// is set, every method call pushes a [`PlatformCall`] variant to the
 /// tracker.
+///
+/// # Why not `mockall`?
+///
+/// `mockall` requires `&mut self` access to set expectations and verify
+/// call counts (via `checkpoint()` and `times()`). When a mock is wrapped
+/// in `Arc<dyn Trait>` — as it must be for window management code that
+/// stores windows as `Arc<dyn NativeWindow>` — there is no way to obtain
+/// `&mut self` through the trait object. See
+/// <https://github.com/asomers/mockall/issues/191> and
+/// <https://github.com/asomers/mockall/issues/385>.
+///
+/// Instead, `MockNativeWindow` uses an optional [`CallTracker`]
+/// side-channel: each method call pushes a [`PlatformCall`] via `&self`,
+/// so no mutable access to the mock itself is needed. This allows call
+/// tracking on mocks that have been erased behind `Arc<dyn NativeWindow>`.
 pub struct MockNativeWindow {
   id: WindowId,
   title: String,
