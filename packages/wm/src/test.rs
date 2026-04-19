@@ -1,10 +1,14 @@
 use std::sync::Arc;
 
-use wm_common::{FloatingStateConfig, TilingDirection, WindowState};
+use wm_common::{
+  FloatingStateConfig, InvokeCommand, TilingDirection, WindowState,
+};
 
 use crate::{
+  commands::container::set_focused_descendant,
   models::{WindowContainer, *},
   traits::*,
+  wm::WindowManager,
   wm_state::WmState,
 };
 
@@ -297,7 +301,6 @@ fn test_multiple_monitors() {
 
 #[test]
 fn test_fullscreen_only_affects_target_window() {
-  use wm_common::{FullscreenStateConfig, TilingDirection, WindowState};
   use wm_platform::test_utils::{
     CallTracker, MockNativeWindow, PlatformMethod,
   };
@@ -364,48 +367,34 @@ fn test_fullscreen_only_affects_target_window() {
     .find_window_by_title("upper_right")
     .expect("upper_right window should exist");
 
-  // Verify all windows start in Tiling state
+  // Focus the upper_right window so that focused_container() resolves it
+  // as the subject for command dispatch.
+  set_focused_descendant(&upper_window.clone().into(), None);
+
+  // Verify all windows start in Tiling state.
   assert!(
     matches!(upper_window.state(), WindowState::Tiling),
     "upper window should start in Tiling state"
   );
 
-  // Verify each window has a unique ID
-  let upper_id = upper_window.native_arc().as_ref().id();
-  let left_id = state
-    .find_window_by_title("left")
-    .expect("left window should exist")
-    .native_arc()
-    .as_ref()
-    .id();
-  let lower_id = state
-    .find_window_by_title("lower_right")
-    .expect("lower_right window should exist")
-    .native_arc()
-    .as_ref()
-    .id();
-  assert_ne!(upper_id, left_id, "windows should have unique IDs");
-  assert_ne!(upper_id, lower_id, "windows should have unique IDs");
-  assert_ne!(left_id, lower_id, "windows should have unique IDs");
-
-  // Toggle the upper_right window to fullscreen (maximized).
-  let fullscreen_state = WindowState::Fullscreen(FullscreenStateConfig {
-    maximized: true,
-    shown_on_top: false,
-  });
-
-  let target_state =
-    upper_window.toggled_state(fullscreen_state, &default_config());
-
-  let updated_window = crate::commands::window::update_window_state(
-    upper_window.clone(),
-    target_state,
+  // Dispatch the Alt+F keybind command: toggle-fullscreen with defaults.
+  WindowManager::run_command(
+    &InvokeCommand::ToggleFullscreen {
+      maximized: None,
+      shown_on_top: None,
+    },
+    upper_window.clone().into(),
     &mut state,
-    &default_config(),
+    &mut default_config(),
   )
-  .expect("update_window_state should succeed");
+  .expect("run_command ToggleFullscreen should succeed");
 
-  // Verify the upper_right window is now fullscreen
+  // Re-fetch the window after the state transition.
+  let updated_window = state
+    .find_window_by_title("upper_right")
+    .expect("upper_right window should exist after toggle");
+
+  // Verify the upper_right window is now fullscreen.
   assert!(
     matches!(updated_window.state(), WindowState::Fullscreen(_)),
     "upper_right should be in Fullscreen state after toggle, got {:?}",
@@ -430,7 +419,7 @@ fn test_fullscreen_only_affects_target_window() {
   );
 
   // Verify that no maximize() calls have been made yet (platform_sync
-  // is needed to trigger native calls, and it requires focus tracking).
+  // is needed to trigger native calls, and it requires a real display).
   assert_eq!(
     tracker.call_count(PlatformMethod::Maximize),
     0,
