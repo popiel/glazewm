@@ -425,7 +425,8 @@ pub(crate) fn nearest_display(
   _: &Dispatcher,
 ) -> crate::Result<crate::Display> {
   let hwnd = native_window.id().0;
-  let handle = unsafe { MonitorFromWindow(HWND(hwnd), MONITOR_DEFAULTTONEAREST) };
+  let handle =
+    unsafe { MonitorFromWindow(HWND(hwnd), MONITOR_DEFAULTTONEAREST) };
 
   Ok(Display::new(handle.0).into())
 }
