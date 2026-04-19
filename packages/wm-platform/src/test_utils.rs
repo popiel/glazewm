@@ -13,7 +13,8 @@ use windows::Win32::UI::WindowsAndMessaging::WINDOW_STYLE;
 
 use crate::{
   Color, CornerStyle, Delta, Dispatcher, Display, NativeWindow,
-  NativeWindowImpl, OpacityValue, Rect, RectDelta, WindowId, WindowZOrder,
+  NativeWindowImpl, OpacityValue, Point, Rect, RectDelta, WindowId,
+  WindowZOrder,
 };
 
 /// A method on a platform type that was called.
@@ -94,6 +95,10 @@ pub enum PlatformMethod {
   IsModal,
   #[cfg(target_os = "macos")]
   IsMain,
+  // Dispatcher methods
+  ResetFocus,
+  CursorPosition,
+  SetCursorPosition,
 }
 
 /// A recorded call to a platform method.
@@ -310,11 +315,23 @@ pub enum PlatformCall {
     id: WindowId,
     result: bool,
   },
+
+  // --- Dispatcher methods ---
+  ResetFocus,
+  CursorPosition {
+    result: Point,
+  },
+  SetCursorPosition {
+    point: Point,
+  },
 }
 
 impl PlatformCall {
   /// Returns the `WindowId` of the window instance this call was made on.
-  pub fn id(&self) -> WindowId {
+  ///
+  /// Returns `None` for `Dispatcher` calls, which are not associated with
+  /// a specific window.
+  pub fn id(&self) -> Option<WindowId> {
     match self {
       Self::Id { id, .. }
       | Self::Title { id, .. }
@@ -334,7 +351,7 @@ impl PlatformCall {
       | Self::Minimize { id }
       | Self::Maximize { id }
       | Self::Focus { id }
-      | Self::Close { id } => *id,
+      | Self::Close { id } => Some(*id),
       #[cfg(target_os = "windows")]
       Self::ClassName { id, .. }
       | Self::FrameWithShadows { id, .. }
@@ -355,13 +372,16 @@ impl PlatformCall {
       | Self::SetBorderColor { id, .. }
       | Self::SetCornerStyle { id, .. }
       | Self::SetTransparency { id, .. }
-      | Self::AdjustTransparency { id, .. } => *id,
+      | Self::AdjustTransparency { id, .. } => Some(*id),
       #[cfg(target_os = "macos")]
       Self::BundleId { id, .. }
       | Self::Role { id, .. }
       | Self::Subrole { id, .. }
       | Self::IsModal { id, .. }
-      | Self::IsMain { id, .. } => *id,
+      | Self::IsMain { id, .. } => Some(*id),
+      Self::ResetFocus
+      | Self::CursorPosition { .. }
+      | Self::SetCursorPosition { .. } => None,
     }
   }
 
@@ -443,6 +463,9 @@ impl PlatformCall {
       Self::IsModal { .. } => PlatformMethod::IsModal,
       #[cfg(target_os = "macos")]
       Self::IsMain { .. } => PlatformMethod::IsMain,
+      Self::ResetFocus => PlatformMethod::ResetFocus,
+      Self::CursorPosition { .. } => PlatformMethod::CursorPosition,
+      Self::SetCursorPosition { .. } => PlatformMethod::SetCursorPosition,
     }
   }
 }
@@ -451,8 +474,8 @@ impl PlatformCall {
 ///
 /// Thread-safe via interior mutability. Shared between the test and mock
 /// instances via `Arc<CallTracker>`. A single tracker can be shared across
-/// multiple mock windows, allowing tests to verify calls across all
-/// windows.
+/// multiple mock windows and the mock `Dispatcher`, allowing tests to
+/// verify calls across all platform interactions.
 ///
 /// # Why not `mockall`?
 ///
@@ -485,13 +508,27 @@ impl CallTracker {
   }
 
   /// Returns all calls made on the window with the given ID.
+  ///
+  /// Dispatcher calls (which have no window ID) are excluded.
   pub fn calls_for(&self, id: WindowId) -> Vec<PlatformCall> {
     self
       .calls
       .lock()
       .unwrap()
       .iter()
-      .filter(|call| call.id() == id)
+      .filter(|call| call.id() == Some(id))
+      .cloned()
+      .collect()
+  }
+
+  /// Returns all calls made on the `Dispatcher` (no window ID).
+  pub fn dispatcher_calls(&self) -> Vec<PlatformCall> {
+    self
+      .calls
+      .lock()
+      .unwrap()
+      .iter()
+      .filter(|call| call.id().is_none())
       .cloned()
       .collect()
   }
@@ -519,7 +556,7 @@ impl CallTracker {
       .lock()
       .unwrap()
       .iter()
-      .filter(|call| call.id() == id && call.method() == method)
+      .filter(|call| call.id() == Some(id) && call.method() == method)
       .count()
   }
 
@@ -836,18 +873,14 @@ impl NativeWindow for MockNativeWindow {
   fn as_windows_ext(
     &self,
   ) -> crate::Result<&dyn crate::NativeWindowWindowsExt> {
-    Err(crate::Error::Platform(
-      "Mock does not implement WindowsExt".into(),
-    ))
+    Ok(self)
   }
 
   #[cfg(target_os = "macos")]
   fn as_macos_ext(
     &self,
   ) -> crate::Result<&dyn crate::NativeWindowExtMacOs> {
-    Err(crate::Error::Platform(
-      "Mock does not implement MacOsExt".into(),
-    ))
+    Ok(self)
   }
 }
 
@@ -1144,12 +1177,29 @@ impl std::fmt::Debug for MockNativeWindow {
 }
 
 impl Dispatcher {
-  /// Creates a mock `Dispatcher` for use in tests.
+  /// Creates a mock `Dispatcher` for use in tests, without call tracking.
   ///
-  /// Calling any methods on the mock is undefined behavior and may panic.
+  /// Calling methods that require a real platform (e.g. `focused_window`,
+  /// `displays`) will panic. Methods that the mock can safely stub
+  /// (`reset_focus`, `cursor_position`, `set_cursor_position`) return
+  /// sensible defaults.
   #[must_use]
   pub fn mock() -> Self {
     Self::new(None, Arc::new(AtomicBool::new(false)))
+  }
+
+  /// Creates a mock `Dispatcher` with call tracking.
+  ///
+  /// The mock stubs `reset_focus`, `cursor_position`, and
+  /// `set_cursor_position` with linked behavior: `cursor_position`
+  /// returns the current stored position (initially `(0, 0)`), and
+  /// `set_cursor_position` updates it. All three methods record their
+  /// calls in the shared [`CallTracker`].
+  #[must_use]
+  pub fn mock_with_tracker(tracker: Arc<CallTracker>) -> Self {
+    let mut dispatcher = Self::new(None, Arc::new(AtomicBool::new(false)));
+    dispatcher.tracker = Some(tracker);
+    dispatcher
   }
 }
 

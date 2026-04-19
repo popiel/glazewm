@@ -5,6 +5,8 @@ extern crate libtest_mimic_collect;
 
 mod dispatcher;
 mod display;
+#[cfg(feature = "test_utils")]
+mod test_utils;
 mod error;
 mod event_loop;
 mod keybinding_listener;

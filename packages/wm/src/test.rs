@@ -329,7 +329,11 @@ fn test_fullscreen_only_affects_target_window() {
       .call(),
   ) as Arc<dyn wm_platform::NativeWindow>;
 
+  let dispatcher =
+    wm_platform::Dispatcher::mock_with_tracker(Arc::clone(&tracker));
+
   let mut state = WmState::mock()
+    .dispatcher(dispatcher)
     .monitors(vec![Monitor::mock()
       .workspaces(vec![Workspace::mock()
         .tiling_containers(vec![SplitContainer::mock()
@@ -389,6 +393,10 @@ fn test_fullscreen_only_affects_target_window() {
   )
   .expect("run_command ToggleFullscreen should succeed");
 
+  // Sync platform state to trigger native calls.
+  crate::commands::general::platform_sync(&mut state, &default_config())
+    .expect("platform_sync should succeed");
+
   // Re-fetch the window after the state transition.
   let updated_window = state
     .find_window_by_title("upper_right")
@@ -418,22 +426,8 @@ fn test_fullscreen_only_affects_target_window() {
     "lower_right window should still be in Tiling state"
   );
 
-  // Verify that no maximize() calls have been made yet (platform_sync
-  // is needed to trigger native calls, and it requires a real display).
-  assert_eq!(
-    tracker.call_count(PlatformMethod::Maximize),
-    0,
-    "maximize() should not be called until platform_sync runs"
-  );
-
-  // Directly call maximize() on the target window to verify the tracker
-  // works and that only the target window is affected.
-  updated_window
-    .native_arc()
-    .as_ref()
-    .maximize()
-    .expect("maximize should succeed on target window");
-
+  // Verify that maximize() was called exactly once on the target window
+  // and not on any other window.
   assert_eq!(
     tracker.call_count(PlatformMethod::Maximize),
     1,

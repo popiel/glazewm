@@ -339,6 +339,10 @@ impl DispatcherExtWindows for Dispatcher {
 pub struct Dispatcher {
   source: Option<platform_impl::EventLoopSource>,
   stopped: Arc<AtomicBool>,
+  #[cfg(feature = "test_utils")]
+  pub(crate) tracker: Option<Arc<crate::test_utils::CallTracker>>,
+  #[cfg(feature = "test_utils")]
+  cursor_position: Arc<std::sync::Mutex<crate::Point>>,
 }
 
 impl Dispatcher {
@@ -348,7 +352,17 @@ impl Dispatcher {
     source: Option<platform_impl::EventLoopSource>,
     stopped: Arc<AtomicBool>,
   ) -> Self {
-    Self { source, stopped }
+    Self {
+      source,
+      stopped,
+      #[cfg(feature = "test_utils")]
+      tracker: None,
+      #[cfg(feature = "test_utils")]
+      cursor_position: Arc::new(std::sync::Mutex::new(crate::Point {
+        x: 0,
+        y: 0,
+      })),
+    }
   }
 
   /// Stops the event loop gracefully from any thread.
@@ -553,6 +567,16 @@ impl Dispatcher {
 
   /// Gets the current cursor position.
   pub fn cursor_position(&self) -> crate::Result<Point> {
+    #[cfg(feature = "test_utils")]
+    if self.source.is_none() {
+      let pos = self.cursor_position.lock().unwrap().clone();
+      if let Some(tracker) = &self.tracker {
+        tracker.push(crate::test_utils::PlatformCall::CursorPosition {
+          result: pos.clone(),
+        });
+      }
+      return Ok(pos);
+    }
     #[cfg(target_os = "macos")]
     {
       let event = CGEvent::new(None);
@@ -614,6 +638,16 @@ impl Dispatcher {
 
   /// Sets the cursor position to the specified coordinates.
   pub fn set_cursor_position(&self, point: &Point) -> crate::Result<()> {
+    #[cfg(feature = "test_utils")]
+    if self.source.is_none() {
+      *self.cursor_position.lock().unwrap() = point.clone();
+      if let Some(tracker) = &self.tracker {
+        tracker.push(crate::test_utils::PlatformCall::SetCursorPosition {
+          point: point.clone(),
+        });
+      }
+      return Ok(());
+    }
     #[cfg(target_os = "macos")]
     {
       let point = CGPoint {
@@ -637,6 +671,13 @@ impl Dispatcher {
 
   /// Removes focus from the current window and focuses the desktop.
   pub fn reset_focus(&self) -> crate::Result<()> {
+    #[cfg(feature = "test_utils")]
+    if self.source.is_none() {
+      if let Some(tracker) = &self.tracker {
+        tracker.push(crate::test_utils::PlatformCall::ResetFocus);
+      }
+      return Ok(());
+    }
     platform_impl::reset_focus(self)
   }
 
