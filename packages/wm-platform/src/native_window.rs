@@ -32,7 +32,7 @@ pub struct WindowId(
 
 impl WindowId {
   #[cfg(target_os = "macos")]
-  pub(crate) fn from_window_element(el: &CFRetained<AXUIElement>) -> Self {
+  pub fn from_window_element(el: &CFRetained<AXUIElement>) -> Self {
     let mut window_id = 0;
 
     unsafe {

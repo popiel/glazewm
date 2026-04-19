@@ -1,7 +1,8 @@
-use super::NativeWindowImpl;
+use std::sync::Arc;
+
 use crate::{
   platform_impl::WindowEventNotificationInner, Keybinding, MouseEventKind,
-  Point, WindowId,
+  NativeWindow, Point, WindowId,
 };
 
 #[derive(Clone, Debug)]
@@ -12,17 +13,17 @@ pub enum PlatformEvent {
   DisplaySettingsChanged,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum WindowEvent {
   /// Window gained focus.
   Focused {
-    window: NativeWindowImpl,
+    window: Arc<dyn NativeWindow>,
     notification: WindowEventNotification,
   },
 
   /// Window was hidden.
   Hidden {
-    window: NativeWindowImpl,
+    window: Arc<dyn NativeWindow>,
     notification: WindowEventNotification,
   },
 
@@ -40,7 +41,7 @@ pub enum WindowEvent {
   ///   The `is_interactive_start` and `is_interactive_end` flags are
   ///   always `false`.
   MovedOrResized {
-    window: NativeWindowImpl,
+    window: Arc<dyn NativeWindow>,
     is_interactive_start: bool,
     is_interactive_end: bool,
     notification: WindowEventNotification,
@@ -48,25 +49,25 @@ pub enum WindowEvent {
 
   /// Window was minimized.
   Minimized {
-    window: NativeWindowImpl,
+    window: Arc<dyn NativeWindow>,
     notification: WindowEventNotification,
   },
 
   /// Window was restored from minimized state.
   MinimizeEnded {
-    window: NativeWindowImpl,
+    window: Arc<dyn NativeWindow>,
     notification: WindowEventNotification,
   },
 
   /// Window became visible.
   Shown {
-    window: NativeWindowImpl,
+    window: Arc<dyn NativeWindow>,
     notification: WindowEventNotification,
   },
 
   /// Window title changed.
   TitleChanged {
-    window: NativeWindowImpl,
+    window: Arc<dyn NativeWindow>,
     notification: WindowEventNotification,
   },
 
@@ -77,11 +78,57 @@ pub enum WindowEvent {
   },
 }
 
+impl std::fmt::Debug for WindowEvent {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    let window_id = self.window().map(|w| w.id());
+    match self {
+      Self::Focused { .. } => f
+        .debug_struct("Focused")
+        .field("window_id", &window_id)
+        .finish(),
+      Self::Hidden { .. } => f
+        .debug_struct("Hidden")
+        .field("window_id", &window_id)
+        .finish(),
+      Self::MovedOrResized {
+        is_interactive_start,
+        is_interactive_end,
+        ..
+      } => f
+        .debug_struct("MovedOrResized")
+        .field("window_id", &window_id)
+        .field("is_interactive_start", &is_interactive_start)
+        .field("is_interactive_end", &is_interactive_end)
+        .finish(),
+      Self::Minimized { .. } => f
+        .debug_struct("Minimized")
+        .field("window_id", &window_id)
+        .finish(),
+      Self::MinimizeEnded { .. } => f
+        .debug_struct("MinimizeEnded")
+        .field("window_id", &window_id)
+        .finish(),
+      Self::Shown { .. } => f
+        .debug_struct("Shown")
+        .field("window_id", &window_id)
+        .finish(),
+      Self::TitleChanged { .. } => f
+        .debug_struct("TitleChanged")
+        .field("window_id", &window_id)
+        .finish(),
+      Self::Destroyed { window_id, .. } => f
+        .debug_struct("Destroyed")
+        .field("window_id", &window_id)
+        .finish(),
+    }
+  }
+}
+
 impl WindowEvent {
   /// Get the window handle if available (not available for
   /// `WindowEvent::Destroyed`).
   #[must_use]
-  pub fn window(&self) -> Option<&NativeWindowImpl> {
+  pub fn window(&self) -> Option<&dyn NativeWindow> {
     match self {
       Self::Focused { window, .. }
       | Self::Hidden { window, .. }
@@ -89,7 +136,7 @@ impl WindowEvent {
       | Self::Minimized { window, .. }
       | Self::MinimizeEnded { window, .. }
       | Self::Shown { window, .. }
-      | Self::TitleChanged { window, .. } => Some(window),
+      | Self::TitleChanged { window, .. } => Some(window.as_ref()),
       Self::Destroyed { .. } => None,
     }
   }

@@ -93,7 +93,7 @@ fn sync_focus(
   // triggered.
   let result = if let Some(window) = native_window {
     tracing::info!("Setting focus to window: {window}");
-    window.native().focus()
+    window.native_arc().as_ref().focus()
   } else {
     tracing::info!("Setting focus to the desktop window.");
     state.dispatcher.reset_focus()
@@ -238,7 +238,7 @@ fn redraw_containers(
           if window.id() == focused_descendant.id() {
             WindowZOrder::Normal
           } else {
-            WindowZOrder::AfterWindow(focused_descendant.native().id())
+            WindowZOrder::AfterWindow(focused_descendant.native_arc().as_ref().id())
           }
         } else {
           WindowZOrder::Normal
@@ -255,7 +255,7 @@ fn redraw_containers(
     if should_bring_to_front && !windows_to_redraw.contains(window) {
       tracing::info!("Updating window z-order: {window}");
 
-      if let Err(err) = window.native().set_z_order(&z_order) {
+      if let Err(err) = window.native_arc().as_ref().as_windows_ext()?.set_z_order(&z_order) {
         tracing::warn!("Failed to set window z-order: {}", err);
       }
     }
@@ -304,7 +304,7 @@ fn redraw_containers(
         };
 
       if is_transitioning_fullscreen {
-        if let Err(err) = window.native().mark_fullscreen(matches!(
+        if let Err(err) = window.native_arc().as_ref().as_windows_ext()?.mark_fullscreen(matches!(
           window.state(),
           WindowState::Fullscreen(_)
         )) {
@@ -325,7 +325,7 @@ fn redraw_containers(
         DisplayState::Showing | DisplayState::Hiding
       )
     {
-      if let Err(err) = window.native().set_taskbar_visibility(is_visible)
+      if let Err(err) = window.native_arc().as_ref().as_windows_ext()?.set_taskbar_visibility(is_visible)
       {
         tracing::warn!("Failed to set taskbar visibility: {}", err);
       }
@@ -374,7 +374,7 @@ fn reposition_window(
     // Even though the window size is unchanged, `NativeWindow::set_frame`
     // is used instead of `NativeWindow::reposition` because the latter
     // resulted in occasional incorrect positionings on macOS.
-    window.native().set_frame(&Rect::from_xy(
+    window.native_arc().as_ref().set_frame(&Rect::from_xy(
       position_x,
       position_y,
       frame.width(),
@@ -385,10 +385,10 @@ fn reposition_window(
   }
 
   if window.active_drag().is_some() {
-    window.native().resize(rect.width(), rect.height())?;
+    window.native_arc().as_ref().resize(rect.width(), rect.height())?;
   } else {
     #[cfg(target_os = "macos")]
-    window.native().set_frame(&rect)?;
+    window.native_arc().as_ref().set_frame(&rect)?;
 
     #[cfg(target_os = "windows")]
     {
@@ -403,22 +403,22 @@ fn reposition_window(
         // Need to restore window if transitioning from maximized
         // fullscreen to non-maximized fullscreen.
         WindowState::Fullscreen(fullscreen) => {
-          !fullscreen.maximized && window.native().is_maximized()?
+          !fullscreen.maximized && window.native_arc().as_ref().is_maximized()?
         }
         // No need to restore window if it'll be minimized. Transitioning
         // from maximized to minimized works without having to
         // restore.
         WindowState::Minimized => false,
         _ => {
-          window.native().is_minimized()?
-            || window.native().is_maximized()?
+          window.native_arc().as_ref().is_minimized()?
+            || window.native_arc().as_ref().is_maximized()?
         }
       };
 
       if should_restore {
         // Restoring to position has the same effect as `ShowWindow` with
         // `SW_RESTORE`, but doesn't cause a flicker.
-        window.native().restore(Some(&rect))?;
+        window.native_arc().as_ref().as_windows_ext()?.restore(Some(&rect))?;
       }
 
       let mut swp_flags = SWP_NOACTIVATE
@@ -428,42 +428,42 @@ fn reposition_window(
 
       match &window.state() {
         WindowState::Minimized => {
-          if !window.native().is_minimized()? {
-            window.native().minimize()?;
+          if !window.native_arc().as_ref().is_minimized()? {
+            window.native_arc().as_ref().minimize()?;
           }
         }
         WindowState::Fullscreen(fullscreen)
           if fullscreen.maximized
-            && window.native().has_window_style(WS_MAXIMIZEBOX) =>
+            && window.native_arc().as_ref().as_windows_ext()?.has_window_style(WS_MAXIMIZEBOX) =>
         {
-          if !window.native().is_maximized()? {
-            window.native().maximize()?;
+          if !window.native_arc().as_ref().is_maximized()? {
+            window.native_arc().as_ref().maximize()?;
           }
 
-          window.native().set_window_pos(z_order, &rect, swp_flags)?;
+          window.native_arc().as_ref().as_windows_ext()?.set_window_pos(z_order, &rect, swp_flags)?;
         }
         _ => {
           swp_flags |= SWP_FRAMECHANGED;
 
-          window.native().set_window_pos(z_order, &rect, swp_flags)?;
+          window.native_arc().as_ref().as_windows_ext()?.set_window_pos(z_order, &rect, swp_flags)?;
 
           // When there's a mismatch between the DPI of the monitor and the
           // window, the window might be sized incorrectly after the first
           // move. If we set the position twice, inconsistencies after the
           // first move are resolved.
           if window.has_pending_dpi_adjustment() {
-            window.native().set_window_pos(z_order, &rect, swp_flags)?;
+            window.native_arc().as_ref().as_windows_ext()?.set_window_pos(z_order, &rect, swp_flags)?;
           }
         }
       }
 
       // Set visibility based on the hide method.
       if config.value.general.hide_method == HideMethod::Cloak {
-        window.native().set_cloaked(!is_visible)?;
+        window.native_arc().as_ref().as_windows_ext()?.set_cloaked(!is_visible)?;
       } else if is_visible {
-        window.native().show()?;
+        window.native_arc().as_ref().as_windows_ext()?.show()?;
       } else {
-        window.native().hide()?;
+        window.native_arc().as_ref().as_windows_ext()?.hide()?;
       }
     }
   }
@@ -566,16 +566,16 @@ fn apply_border_effect(
     None
   };
 
-  _ = window.native().set_border_color(border_color);
+  let _ = window.native_arc().as_ref().as_windows_ext().map(|ext| ext.set_border_color(border_color));
 
-  let native = window.native().clone();
+  let native = window.native_arc();
   let border_color = border_color.cloned();
 
   // Re-apply border color after a short delay to better handle
   // windows that change it themselves.
   tokio::task::spawn(async move {
     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-    _ = native.set_border_color(border_color.as_ref());
+    _ = native.as_windows_ext().map(|ext| ext.set_border_color(border_color.as_ref()));
   });
 }
 
@@ -585,8 +585,9 @@ fn apply_hide_title_bar_effect(
   effect_config: &WindowEffectConfig,
 ) {
   _ = window
-    .native()
-    .set_title_bar_visibility(!effect_config.hide_title_bar.enabled);
+    .native_arc().as_ref()
+    .as_windows_ext()
+    .map(|ext| ext.set_title_bar_visibility(!effect_config.hide_title_bar.enabled));
 }
 
 #[cfg(target_os = "windows")]
@@ -600,7 +601,7 @@ fn apply_corner_effect(
     &CornerStyle::Default
   };
 
-  _ = window.native().set_corner_style(corner_style);
+  let _ = window.native_arc().as_ref().as_windows_ext().map(|ext| ext.set_corner_style(corner_style));
 }
 
 #[cfg(target_os = "windows")]
@@ -615,5 +616,5 @@ fn apply_transparency_effect(
     &OpacityValue::from_alpha(u8::MAX)
   };
 
-  _ = window.native().set_transparency(transparency);
+  let _ = window.native_arc().as_ref().as_windows_ext().map(|ext| ext.set_transparency(transparency));
 }

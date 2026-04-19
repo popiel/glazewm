@@ -1,6 +1,6 @@
 use tracing::info;
 use wm_common::{try_warn, WindowRuleEvent};
-use wm_platform::NativeWindowImpl;
+use wm_platform::NativeWindow;
 
 use crate::{
   commands::window::run_window_rules, traits::WindowGetters,
@@ -8,7 +8,7 @@ use crate::{
 };
 
 pub fn handle_window_title_changed(
-  native_window: &NativeWindowImpl,
+  native_window: &dyn NativeWindow,
   state: &mut WmState,
   config: &mut UserConfig,
 ) -> anyhow::Result<()> {
@@ -17,7 +17,7 @@ pub fn handle_window_title_changed(
   if let Some(window) = found_window {
     info!("Window title changed: {window}");
 
-    let title = try_warn!(window.native().title());
+    let title = try_warn!(window.native_arc().as_ref().title());
 
     window.update_native_properties(|properties| {
       properties.title = title;

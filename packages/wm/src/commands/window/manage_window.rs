@@ -1,7 +1,9 @@
+use std::sync::Arc;
+
 use anyhow::Context;
 use tracing::info;
 use wm_common::{try_warn, WindowRuleEvent, WindowState, WmEvent};
-use wm_platform::{NativeWindowImpl, RectDelta};
+use wm_platform::{NativeWindow, RectDelta};
 
 use crate::{
   commands::{
@@ -18,13 +20,13 @@ use crate::{
 };
 
 pub fn manage_window(
-  native_window: NativeWindowImpl,
+  native_window: Arc<dyn NativeWindow>,
   target_parent: Option<Container>,
   state: &mut WmState,
   config: &mut UserConfig,
 ) -> anyhow::Result<()> {
   let Some(native_properties) =
-    check_is_manageable(&native_window).unwrap_or(None)
+    check_is_manageable(native_window.as_ref()).unwrap_or(None)
   else {
     return Ok(());
   };
@@ -89,7 +91,7 @@ pub fn manage_window(
 /// Returns `Ok(Some(properties))` if the window is manageable and its
 /// properties were retrieved successfully.
 fn check_is_manageable(
-  native_window: &NativeWindowImpl,
+  native_window: &dyn NativeWindow,
 ) -> anyhow::Result<Option<NativeWindowProperties>> {
   if !native_window.is_visible()? {
     return Ok(None);
@@ -127,8 +129,9 @@ fn check_is_manageable(
       // Ensure window is top-level (i.e. not a child window). Ignore
       // windows that cannot be focused or if they're unavailable in
       // task switcher (alt+tab menu).
-      if native_window.has_window_style(WS_CHILD)
-        || native_window
+      let windows_ext = native_window.as_windows_ext()?;
+      if windows_ext.has_window_style(WS_CHILD)
+        || windows_ext
           .has_window_style_ex(WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW)
       {
         return Ok(None);
@@ -139,8 +142,8 @@ fn check_is_manageable(
       // Notepad++ and title bar menu in Keepass. Although not
       // foolproof, these can typically be identified by having an
       // owner window and no title bar.
-      if native_window.has_owner_window()
-        && !native_window.has_window_style(WS_CAPTION)
+      if windows_ext.has_owner_window()
+        && !windows_ext.has_window_style(WS_CAPTION)
       {
         return Ok(None);
       }
@@ -151,14 +154,14 @@ fn check_is_manageable(
 }
 
 fn create_window(
-  native_window: NativeWindowImpl,
+  native_window: Arc<dyn NativeWindow>,
   native_properties: NativeWindowProperties,
   target_parent: Option<Container>,
   state: &mut WmState,
   config: &UserConfig,
 ) -> anyhow::Result<WindowContainer> {
   let nearest_monitor = state
-    .nearest_monitor(&native_window)
+    .nearest_monitor(native_window.as_ref())
     .context("No nearest monitor.")?;
 
   let nearest_workspace = nearest_monitor

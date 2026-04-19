@@ -1,4 +1,4 @@
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 
 use tokio::sync::mpsc;
 use windows::Win32::{
@@ -17,7 +17,10 @@ use windows::Win32::{
 };
 
 use super::NativeWindow;
-use crate::{Dispatcher, WindowEvent, WindowId};
+use crate::{
+  Dispatcher, NativeWindow as NativeWindowTrait, NativeWindowImpl,
+  WindowEvent, WindowId,
+};
 
 thread_local! {
   /// Sender for window events. For use with hook procedure.
@@ -135,45 +138,63 @@ impl WindowListener {
         notification,
       },
       EVENT_SYSTEM_FOREGROUND => WindowEvent::Focused {
-        window: NativeWindow::new(handle.0).into(),
+        window: Arc::new(NativeWindowImpl::from(NativeWindow::new(
+          handle.0,
+        ))) as _,
         notification,
       },
       EVENT_OBJECT_HIDE | EVENT_OBJECT_CLOAKED => WindowEvent::Hidden {
-        window: NativeWindow::new(handle.0).into(),
+        window: Arc::new(NativeWindowImpl::from(NativeWindow::new(
+          handle.0,
+        ))) as _,
         notification,
       },
       EVENT_OBJECT_LOCATIONCHANGE => WindowEvent::MovedOrResized {
-        window: NativeWindow::new(handle.0).into(),
+        window: Arc::new(NativeWindowImpl::from(NativeWindow::new(
+          handle.0,
+        ))) as _,
         is_interactive_start: false,
         is_interactive_end: false,
         notification,
       },
       EVENT_SYSTEM_MINIMIZESTART => WindowEvent::Minimized {
-        window: NativeWindow::new(handle.0).into(),
+        window: Arc::new(NativeWindowImpl::from(NativeWindow::new(
+          handle.0,
+        ))) as _,
         notification,
       },
       EVENT_SYSTEM_MINIMIZEEND => WindowEvent::MinimizeEnded {
-        window: NativeWindow::new(handle.0).into(),
+        window: Arc::new(NativeWindowImpl::from(NativeWindow::new(
+          handle.0,
+        ))) as _,
         notification,
       },
       EVENT_SYSTEM_MOVESIZESTART => WindowEvent::MovedOrResized {
-        window: NativeWindow::new(handle.0).into(),
+        window: Arc::new(NativeWindowImpl::from(NativeWindow::new(
+          handle.0,
+        ))) as _,
         is_interactive_start: true,
         is_interactive_end: false,
         notification,
       },
       EVENT_SYSTEM_MOVESIZEEND => WindowEvent::MovedOrResized {
-        window: NativeWindow::new(handle.0).into(),
+        window: Arc::new(NativeWindowImpl::from(NativeWindow::new(
+          handle.0,
+        ))) as _,
         is_interactive_start: false,
         is_interactive_end: true,
         notification,
       },
       EVENT_OBJECT_SHOW | EVENT_OBJECT_UNCLOAKED => WindowEvent::Shown {
-        window: NativeWindow::new(handle.0).into(),
+        window: Arc::new(NativeWindowImpl::from(NativeWindow::new(
+          handle.0,
+        ))) as _,
         notification,
       },
       EVENT_OBJECT_NAMECHANGE => WindowEvent::TitleChanged {
-        window: NativeWindow::new(handle.0).into(),
+        window: Arc::new(NativeWindowImpl::from(NativeWindow::new(
+          handle.0,
+        ))) as _,
         notification,
       },
       _ => return,

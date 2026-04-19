@@ -529,7 +529,7 @@ impl Dispatcher {
   /// frame. Defaults to the primary display if no overlap is found.
   pub fn nearest_display(
     &self,
-    native_window: &NativeWindowImpl,
+    native_window: &dyn NativeWindow,
   ) -> crate::Result<Display> {
     platform_impl::nearest_display(native_window, self)
   }

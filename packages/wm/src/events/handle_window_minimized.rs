@@ -1,6 +1,6 @@
 use tracing::info;
 use wm_common::{try_warn, WindowState};
-use wm_platform::NativeWindowImpl;
+use wm_platform::NativeWindow;
 
 use crate::{
   commands::{
@@ -12,7 +12,7 @@ use crate::{
 };
 
 pub fn handle_window_minimized(
-  native_window: &NativeWindowImpl,
+  native_window: &dyn NativeWindow,
   state: &mut WmState,
   config: &UserConfig,
 ) -> anyhow::Result<()> {
@@ -20,7 +20,8 @@ pub fn handle_window_minimized(
 
   // Update the window's state to be minimized.
   if let Some(window) = found_window {
-    let is_minimized = try_warn!(window.native().is_minimized());
+    let is_minimized =
+      try_warn!(window.native_arc().as_ref().is_minimized());
 
     window.update_native_properties(|properties| {
       properties.is_minimized = is_minimized;

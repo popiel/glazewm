@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 use tracing::info;
 use wm_common::{DisplayState, HideMethod};
-use wm_platform::NativeWindowImpl;
+use wm_platform::NativeWindow;
 
 use crate::{
   commands::window::manage_window, traits::WindowGetters,
@@ -8,11 +10,11 @@ use crate::{
 };
 
 pub fn handle_window_shown(
-  native_window: NativeWindowImpl,
+  native_window: Arc<dyn NativeWindow>,
   state: &mut WmState,
   config: &mut UserConfig,
 ) -> anyhow::Result<()> {
-  let found_window = state.window_from_native(&native_window);
+  let found_window = state.window_from_native(native_window.as_ref());
 
   if let Some(window) = found_window {
     info!("Window shown: {window}");
@@ -25,7 +27,7 @@ pub fn handle_window_shown(
     } else {
       state.pending_sync.queue_container_to_redraw(window);
     }
-  } else if !state.ignored_windows.contains(&native_window) {
+  } else if !state.ignored_windows.contains(&native_window.id()) {
     // If the window is not managed and not explicitly ignored, manage it.
     manage_window(native_window, None, state, config)?;
   }

@@ -13,7 +13,8 @@ use crate::{
   platform_impl::{
     Application, NativeWindow, ProcessId, WindowEventNotificationInner,
   },
-  NativeWindowExtMacOs, ThreadBound, WindowEvent, WindowId,
+  NativeWindow as NativeWindowTrait, NativeWindowExtMacOs, ThreadBound,
+  WindowEvent, WindowId,
 };
 
 /// Notifications to register for the `AXUIElement` of an application.
@@ -35,7 +36,7 @@ const AX_WINDOW_NOTIFICATIONS: &[&str] = &[
 struct ApplicationEventContext {
   application: Application,
   events_tx: mpsc::UnboundedSender<WindowEvent>,
-  app_windows: Arc<Mutex<Vec<crate::NativeWindow>>>,
+  app_windows: Arc<Mutex<Vec<Arc<dyn NativeWindowTrait>>>>,
   observer: CFRetained<AXObserver>,
 }
 
@@ -43,7 +44,7 @@ struct ApplicationEventContext {
 #[derive(Debug)]
 pub(crate) struct ApplicationObserver {
   pub(crate) pid: ProcessId,
-  app_windows: Arc<Mutex<Vec<crate::NativeWindow>>>,
+  app_windows: Arc<Mutex<Vec<Arc<dyn NativeWindowTrait>>>>,
   events_tx: mpsc::UnboundedSender<WindowEvent>,
   _observer: CFRetained<AXObserver>,
   observer_source: CFRetained<CFRunLoopSource>,
@@ -121,7 +122,7 @@ impl ApplicationObserver {
       // running on startup.
       if !is_startup {
         if let Err(err) = events_tx.send(WindowEvent::Shown {
-          window: window.clone(),
+          window: (*window).clone(),
           notification: crate::WindowEventNotification(None),
         }) {
           tracing::warn!(
@@ -214,7 +215,7 @@ impl ApplicationObserver {
   pub(crate) fn emit_all_windows_hidden(&self) {
     for window in self.app_windows.lock().unwrap().iter() {
       if let Err(err) = self.events_tx.send(WindowEvent::Hidden {
-        window: window.clone(),
+        window: (*window).clone(),
         notification: crate::WindowEventNotification(None),
       }) {
         tracing::warn!(
@@ -229,7 +230,7 @@ impl ApplicationObserver {
   pub(crate) fn emit_all_windows_shown(&self) {
     for window in self.app_windows.lock().unwrap().iter() {
       if let Err(err) = self.events_tx.send(WindowEvent::Shown {
-        window: window.clone(),
+        window: (*window).clone(),
         notification: crate::WindowEventNotification(None),
       }) {
         tracing::warn!(
@@ -313,15 +314,16 @@ impl ApplicationObserver {
     });
 
     if is_new_window {
-      context.app_windows.lock().unwrap().push(window.clone());
+      let window_arc = Arc::new(window) as Arc<dyn NativeWindowTrait>;
+      context.app_windows.lock().unwrap().push(window_arc.clone());
       let _ = Self::register_window_notifications(
-        &window,
+        &*window_arc,
         &context.observer.clone(),
         context,
       );
 
       if let Err(err) = context.events_tx.send(WindowEvent::Shown {
-        window: window.clone(),
+        window: window_arc,
         notification: crate::WindowEventNotification(Some(
           notification.clone(),
         )),

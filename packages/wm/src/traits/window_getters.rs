@@ -1,8 +1,8 @@
-use std::cell::Ref;
+use std::sync::Arc;
 
 use ambassador::delegatable_trait;
 use wm_common::{ActiveDrag, DisplayState, WindowRuleConfig, WindowState};
-use wm_platform::{LengthValue, NativeWindowImpl, Rect, RectDelta};
+use wm_platform::{LengthValue, NativeWindow, Rect, RectDelta};
 
 use crate::{
   models::{NativeWindowProperties, Workspace},
@@ -58,7 +58,7 @@ pub trait WindowGetters: CommonGetters {
       })
   }
 
-  fn native(&self) -> Ref<'_, NativeWindowImpl>;
+  fn native_arc(&self) -> Arc<dyn NativeWindow>;
 
   fn border_delta(&self) -> RectDelta;
 
@@ -193,8 +193,8 @@ macro_rules! impl_window_getters {
         self.0.borrow_mut().prev_state = Some(state);
       }
 
-      fn native(&self) -> Ref<'_, NativeWindowImpl> {
-        Ref::map(self.0.borrow(), |inner| &inner.native)
+      fn native_arc(&self) -> Arc<dyn NativeWindow> {
+        self.0.borrow().native.clone()
       }
 
       fn border_delta(&self) -> RectDelta {

@@ -108,13 +108,13 @@ impl WindowManager {
       }
       PlatformEvent::Window(window_event) => match window_event {
         WindowEvent::Focused { window, .. } => {
-          handle_window_focused(&window, state, config)
+          handle_window_focused(window.as_ref(), state, config)
         }
         WindowEvent::Shown { window, .. } => {
           handle_window_shown(window, state, config)
         }
         WindowEvent::Hidden { window, .. } => {
-          handle_window_hidden(&window, state, config)
+          handle_window_hidden(window.as_ref(), state, config)
         }
         WindowEvent::MovedOrResized {
           window,
@@ -122,20 +122,20 @@ impl WindowManager {
           is_interactive_end,
           ..
         } => handle_window_moved_or_resized(
-          &window,
+          window.as_ref(),
           is_interactive_start,
           is_interactive_end,
           state,
           config,
         ),
         WindowEvent::Minimized { window, .. } => {
-          handle_window_minimized(&window, state, config)
+          handle_window_minimized(window.as_ref(), state, config)
         }
         WindowEvent::MinimizeEnded { window, .. } => {
-          handle_window_minimize_ended(&window, state, config)
+          handle_window_minimize_ended(window.as_ref(), state, config)
         }
         WindowEvent::TitleChanged { window, .. } => {
-          handle_window_title_changed(&window, state, config)
+          handle_window_title_changed(window.as_ref(), state, config)
         }
         WindowEvent::Destroyed { window_id, .. } => {
           handle_window_destroyed(window_id, state)
@@ -254,7 +254,7 @@ impl WindowManager {
         match subject_container.as_window_container() {
           Ok(window) => {
             // Window handle might no longer be valid here.
-            if let Err(err) = window.native().close() {
+            if let Err(err) = window.native_arc().as_ref().close() {
               warn!("Failed to close window: {:?}", err);
             }
 
@@ -600,9 +600,11 @@ impl WindowManager {
       } => match subject_container.as_window_container() {
         #[cfg(target_os = "windows")]
         Ok(window) => {
-          _ = window.native().set_title_bar_visibility(
-            *visibility == TitleBarVisibility::Shown,
-          );
+          _ = window.native_arc().as_ref().as_windows_ext().map(|ext| {
+            ext.set_title_bar_visibility(
+              *visibility == TitleBarVisibility::Shown,
+            )
+          });
           Ok(())
         }
         _ => Ok(()),
@@ -614,11 +616,19 @@ impl WindowManager {
           #[cfg(target_os = "windows")]
           Ok(window) => {
             if let Some(opacity) = &args.opacity {
-              _ = window.native().set_transparency(opacity);
+              _ = window
+                .native_arc()
+                .as_ref()
+                .as_windows_ext()
+                .map(|ext| ext.set_transparency(opacity));
             }
 
             if let Some(opacity_delta) = &args.opacity_delta {
-              _ = window.native().adjust_transparency(opacity_delta);
+              _ = window
+                .native_arc()
+                .as_ref()
+                .as_windows_ext()
+                .map(|ext| ext.adjust_transparency(opacity_delta));
             }
 
             Ok(())

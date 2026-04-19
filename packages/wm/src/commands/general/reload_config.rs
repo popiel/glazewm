@@ -46,7 +46,11 @@ pub fn reload_config(
     && config.value.general.hide_method == HideMethod::Cloak
   {
     for window in state.windows() {
-      let _ = window.native().show();
+      let _ = window
+        .native_arc()
+        .as_ref()
+        .as_windows_ext()
+        .map(|ext| ext.show());
     }
   }
 
@@ -58,7 +62,11 @@ pub fn reload_config(
     && config.value.general.show_all_in_taskbar
   {
     for window in state.windows() {
-      let _ = window.native().set_taskbar_visibility(true);
+      let _ = window
+        .native_arc()
+        .as_ref()
+        .as_windows_ext()
+        .map(|ext| ext.set_taskbar_visibility(true));
     }
   }
 
@@ -174,7 +182,11 @@ fn update_window_effects(
     && old_window_effects.focused_window.border.enabled
   {
     if let Ok(window) = focused_container.as_window_container() {
-      _ = window.native().set_border_color(None);
+      _ = window
+        .native_arc()
+        .as_ref()
+        .as_windows_ext()
+        .map(|ext| ext.set_border_color(None));
     }
   }
 
@@ -187,7 +199,11 @@ fn update_window_effects(
       .filter(|window| window.id() != focused_container.id());
 
     for window in unfocused_windows {
-      _ = window.native().set_border_color(None);
+      _ = window
+        .native_arc()
+        .as_ref()
+        .as_windows_ext()
+        .map(|ext| ext.set_border_color(None));
     }
   }
 

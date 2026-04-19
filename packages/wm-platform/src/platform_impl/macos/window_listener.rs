@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use objc2::rc::Retained;
 use objc2_app_kit::NSWorkspace;
@@ -9,7 +9,7 @@ use crate::{
     self, Application, ApplicationObserver, NotificationCenter,
     NotificationEvent, NotificationName, NotificationObserver, ProcessId,
   },
-  Dispatcher, ThreadBound, WindowEvent,
+  Dispatcher, NativeWindow, ThreadBound, WindowEvent,
 };
 
 /// Platform-specific implementation of [`WindowEventNotification`].
@@ -182,7 +182,7 @@ impl WindowListener {
           };
 
           let _ = events_tx.send(WindowEvent::Focused {
-            window: focused_window,
+            window: Arc::new(focused_window) as Arc<dyn NativeWindow>,
             notification: crate::WindowEventNotification(None),
           });
         }

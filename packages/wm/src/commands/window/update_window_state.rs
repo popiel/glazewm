@@ -133,7 +133,7 @@ fn set_non_tiling(
 
     // TODO: Instead of doing the platform call directly here, instead add
     // a `queue_state_change` method to `PendingSync`.
-    if let Err(err) = window.native().minimize() {
+    if let Err(err) = window.native_arc().as_ref().minimize() {
       warn!("Failed to minimize window: {}", err);
     }
 

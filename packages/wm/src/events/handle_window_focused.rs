@@ -1,7 +1,7 @@
 use anyhow::Context;
 use tracing::info;
 use wm_common::{DisplayState, WindowRuleEvent, WmEvent};
-use wm_platform::NativeWindowImpl;
+use wm_platform::NativeWindow;
 
 use crate::{
   commands::{
@@ -15,7 +15,7 @@ use crate::{
 };
 
 pub fn handle_window_focused(
-  native_window: &NativeWindowImpl,
+  native_window: &dyn NativeWindow,
   state: &mut WmState,
   config: &mut UserConfig,
 ) -> anyhow::Result<()> {
@@ -26,7 +26,7 @@ pub fn handle_window_focused(
   // Update the focus sync state. If the OS focused window is not same as
   // the WM's focused container, then the focus is not synced.
   state.is_focus_synced = match focused_container.as_window_container() {
-    Ok(window) => *window.native() == *native_window,
+    Ok(window) => window.native_arc().as_ref().id() == native_window.id(),
     _ => native_window.is_desktop_window().unwrap_or(false),
   };
 

@@ -1,6 +1,6 @@
 use tracing::info;
 use wm_common::{DisplayState, HideMethod};
-use wm_platform::NativeWindowImpl;
+use wm_platform::NativeWindow;
 
 use crate::{
   commands::window::unmanage_window, traits::WindowGetters,
@@ -8,7 +8,7 @@ use crate::{
 };
 
 pub fn handle_window_hidden(
-  native_window: &NativeWindowImpl,
+  native_window: &dyn NativeWindow,
   state: &mut WmState,
   config: &UserConfig,
 ) -> anyhow::Result<()> {
@@ -30,7 +30,7 @@ pub fn handle_window_hidden(
     // we need to ignore events where the window is not actually hidden.
     if (config.value.general.hide_method == HideMethod::PlaceInCorner
       || window.display_state() == DisplayState::Shown)
-      && !window.native().is_visible().unwrap_or(false)
+      && !window.native_arc().as_ref().is_visible().unwrap_or(false)
     {
       unmanage_window(window, state)?;
     }

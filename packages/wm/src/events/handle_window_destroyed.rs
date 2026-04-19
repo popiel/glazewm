@@ -15,7 +15,7 @@ pub fn handle_window_destroyed(
   let found_window = state
     .windows()
     .into_iter()
-    .find(|window| window.native().id() == native_window_id);
+    .find(|window| window.native_arc().as_ref().id() == native_window_id);
 
   // Unmanage the window if it's currently managed.
   if let Some(window) = found_window {

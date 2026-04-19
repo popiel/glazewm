@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{sync::Arc, time::Instant};
 
 use anyhow::Context;
 use tokio::sync::mpsc::{self};
@@ -6,7 +6,7 @@ use tracing::warn;
 use uuid::Uuid;
 use wm_common::{BindingModeConfig, HideCorner, WindowState, WmEvent};
 use wm_platform::{
-  Direction, Dispatcher, Display, NativeWindowImpl, Point, Rect,
+  Direction, Dispatcher, Display, NativeWindow, Point, Rect, WindowId,
 };
 #[cfg(target_os = "windows")]
 use wm_platform::{NativeWindowWindowsExt, OpacityValue};
@@ -59,7 +59,7 @@ pub struct WmState {
 
   /// Windows that the WM should ignore. Windows can be added via the
   /// `ignore` command.
-  pub ignored_windows: Vec<NativeWindowImpl>,
+  pub ignored_windows: Vec<WindowId>,
 
   /// Whether the WM is paused.
   pub is_paused: bool,
@@ -126,17 +126,13 @@ impl WmState {
     for native_window in
       self.dispatcher.visible_windows()?.into_iter().rev()
     {
+      let native_arc: Arc<dyn NativeWindow> = Arc::new(native_window);
       let nearest_workspace = self
-        .nearest_monitor(&native_window)
+        .nearest_monitor(native_arc.as_ref())
         .and_then(|m| m.displayed_workspace());
 
       if let Some(workspace) = nearest_workspace {
-        manage_window(
-          native_window,
-          Some(workspace.into()),
-          self,
-          config,
-        )?;
+        manage_window(native_arc, Some(workspace.into()), self, config)?;
       }
     }
 
@@ -199,7 +195,7 @@ impl WmState {
   /// Defaults to the first monitor if the nearest monitor is invalid.
   pub fn nearest_monitor(
     &self,
-    native_window: &NativeWindowImpl,
+    native_window: &dyn NativeWindow,
   ) -> Option<Monitor> {
     self
       .monitor_from_native(
@@ -327,15 +323,16 @@ impl WmState {
       .collect()
   }
 
-  /// Gets window that corresponds to the given `NativeWindowImpl`.
+  /// Gets window that corresponds to the given native window.
   pub fn window_from_native(
     &self,
-    native_window: &NativeWindowImpl,
+    native_window: &dyn NativeWindow,
   ) -> Option<WindowContainer> {
+    let id = native_window.id();
     self
       .windows()
       .into_iter()
-      .find(|window| &*window.native() == native_window)
+      .find(|window| window.native_arc().as_ref().id() == id)
   }
 
   pub fn workspace_by_name(
@@ -667,7 +664,7 @@ impl WmState {
     let invalid_windows = self
       .windows()
       .into_iter()
-      .filter(|window| !window.native().is_valid());
+      .filter(|window| !window.native_arc().as_ref().is_valid());
 
     for window in invalid_windows {
       tracing::info!("Removing invalid window: {}", window);
@@ -675,7 +672,12 @@ impl WmState {
     }
 
     // Prune ignored windows that are no longer valid.
-    self.ignored_windows.retain(|w| w.is_valid());
+    let window_ids: Vec<_> = self
+      .windows()
+      .iter()
+      .map(|w| w.native_arc().as_ref().id())
+      .collect();
+    self.ignored_windows.retain(|id| window_ids.contains(id));
 
     Ok(())
   }
@@ -689,7 +691,7 @@ impl Drop for WmState {
       // Redraw windows to their intended positions. On macOS, this will
       // unhide windows that are on other workspaces.
       if let Ok(rect) = window.to_rect() {
-        if let Err(err) = window.native().set_frame(&rect) {
+        if let Err(err) = window.native_arc().as_ref().set_frame(&rect) {
           warn!("Failed to redraw window on cleanup: {:?}", err);
         }
       }
@@ -697,15 +699,29 @@ impl Drop for WmState {
       // Reset any effects on Windows.
       #[cfg(target_os = "windows")]
       {
-        if let Err(err) = window.native().show() {
+        use wm_platform::NativeWindowWindowsExt;
+        if let Err(err) = window
+          .native_arc()
+          .as_ref()
+          .as_windows_ext()
+          .map(|ext| ext.show())
+        {
           warn!("Failed to show window: {:?}", err);
         }
 
-        let _ = window.native().set_taskbar_visibility(true);
-        let _ = window.native().set_border_color(None);
         let _ = window
-          .native()
-          .set_transparency(&OpacityValue::from_alpha(u8::MAX));
+          .native_arc()
+          .as_ref()
+          .as_windows_ext()
+          .map(|ext| ext.set_taskbar_visibility(true));
+        let _ = window
+          .native_arc()
+          .as_ref()
+          .as_windows_ext()
+          .map(|ext| ext.set_border_color(None));
+        let _ = window.native_arc().as_ref().as_windows_ext().map(|ext| {
+          ext.set_transparency(&OpacityValue::from_alpha(u8::MAX))
+        });
       }
     }
   }

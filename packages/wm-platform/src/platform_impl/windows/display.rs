@@ -1,7 +1,7 @@
 use windows::{
   core::PCWSTR,
   Win32::{
-    Foundation::{BOOL, LPARAM, POINT, RECT},
+    Foundation::{BOOL, HWND, LPARAM, POINT, RECT},
     Graphics::Gdi::{
       EnumDisplayDevicesW, EnumDisplayMonitors, EnumDisplaySettingsW,
       GetMonitorInfoW, MonitorFromPoint, MonitorFromWindow, DEVMODEW,
@@ -21,7 +21,7 @@ use crate::{
     ConnectionState, DisplayDeviceId, DisplayId, MirroringState,
     OutputTechnology,
   },
-  Dispatcher, NativeWindowImpl, Point, Rect,
+  Dispatcher, Point, Rect,
 };
 
 /// Platform-specific implementation of [`Display`].
@@ -421,12 +421,11 @@ pub(crate) fn primary_display(
 /// Implements [`Dispatcher::nearest_display`].
 #[allow(clippy::unnecessary_wraps)]
 pub(crate) fn nearest_display(
-  native_window: &NativeWindowImpl,
+  native_window: &dyn crate::NativeWindow,
   _: &Dispatcher,
 ) -> crate::Result<crate::Display> {
-  let handle = unsafe {
-    MonitorFromWindow(native_window.inner.hwnd(), MONITOR_DEFAULTTONEAREST)
-  };
+  let hwnd = native_window.id().0;
+  let handle = unsafe { MonitorFromWindow(HWND(hwnd), MONITOR_DEFAULTTONEAREST) };
 
   Ok(Display::new(handle.0).into())
 }

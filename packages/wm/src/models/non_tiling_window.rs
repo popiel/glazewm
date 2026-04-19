@@ -2,6 +2,7 @@ use std::{
   cell::{Ref, RefCell, RefMut},
   collections::VecDeque,
   rc::Rc,
+  sync::Arc,
 };
 
 use anyhow::Context;
@@ -10,7 +11,7 @@ use wm_common::{
   ActiveDrag, ContainerDto, DisplayState, GapsConfig, WindowDto,
   WindowRuleConfig, WindowState,
 };
-use wm_platform::{NativeWindowImpl, Rect, RectDelta};
+use wm_platform::{NativeWindow, Rect, RectDelta};
 
 use crate::{
   impl_common_getters, impl_container_debug, impl_window_getters,
@@ -30,7 +31,7 @@ struct NonTilingWindowInner {
   parent: Option<Container>,
   children: VecDeque<Container>,
   child_focus_order: VecDeque<Uuid>,
-  native: NativeWindowImpl,
+  native: Arc<dyn NativeWindow>,
   native_properties: NativeWindowProperties,
   state: WindowState,
   prev_state: Option<WindowState>,
@@ -48,7 +49,7 @@ impl NonTilingWindow {
   #[allow(clippy::too_many_arguments)]
   pub fn new(
     id: Option<Uuid>,
-    native: NativeWindowImpl,
+    native: Arc<dyn NativeWindow>,
     properties: NativeWindowProperties,
     state: WindowState,
     prev_state: Option<WindowState>,
@@ -101,7 +102,7 @@ impl NonTilingWindow {
 
     TilingWindow::new(
       Some(self.id()),
-      self.native().clone(),
+      self.native_arc(),
       self.native_properties().clone(),
       prev_state,
       self.border_delta(),
@@ -131,7 +132,7 @@ impl NonTilingWindow {
       border_delta: self.border_delta(),
       floating_placement: self.floating_placement(),
       #[allow(clippy::cast_possible_wrap, clippy::unnecessary_cast)]
-      handle: self.native().id().0 as isize,
+      handle: self.native_arc().as_ref().id().0 as isize,
       title: self.native_properties().title,
       #[cfg(target_os = "windows")]
       class_name: self.native_properties().class_name,
