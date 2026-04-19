@@ -17,10 +17,7 @@ use windows::Win32::{
 };
 
 use super::NativeWindow;
-use crate::{
-  Dispatcher, NativeWindow as NativeWindowTrait, NativeWindowImpl,
-  WindowEvent, WindowId,
-};
+use crate::{Dispatcher, NativeWindowImpl, WindowEvent, WindowId};
 
 thread_local! {
   /// Sender for window events. For use with hook procedure.

@@ -292,3 +292,169 @@ fn test_multiple_monitors() {
     "m2-window-1 should be on monitor-2"
   );
 }
+
+#[test]
+fn test_fullscreen_only_affects_target_window() {
+  use wm_common::{FullscreenStateConfig, TilingDirection, WindowState};
+  use wm_platform::NativeWindowImpl;
+
+  let (left_tracker, window_left) =
+    NativeWindowImpl::mock_with_tracker(wm_platform::WindowId(1), "left");
+  let (upper_tracker, window_upper) = NativeWindowImpl::mock_with_tracker(
+    wm_platform::WindowId(2),
+    "upper_right",
+  );
+  let (lower_tracker, window_lower) = NativeWindowImpl::mock_with_tracker(
+    wm_platform::WindowId(3),
+    "lower_right",
+  );
+
+  let mut state = WmState::mock()
+    .monitors(vec![Monitor::mock()
+      .workspaces(vec![Workspace::mock()
+        .tiling_containers(vec![SplitContainer::mock()
+          .tiling_direction(TilingDirection::Horizontal)
+          .tiling_containers(vec![
+            TilingWindow::mock()
+              .title("left".into())
+              .native(window_left)
+              .call()
+              .into(),
+            SplitContainer::mock()
+              .tiling_direction(TilingDirection::Vertical)
+              .tiling_containers(vec![
+                TilingWindow::mock()
+                  .title("upper_right".into())
+                  .native(window_upper)
+                  .call()
+                  .into(),
+                TilingWindow::mock()
+                  .title("lower_right".into())
+                  .native(window_lower)
+                  .call()
+                  .into(),
+              ])
+              .call()
+              .into(),
+          ])
+          .call()
+          .into()])
+        .call()])
+      .call()])
+    .call();
+
+  let upper_window = state
+    .find_window_by_title("upper_right")
+    .expect("upper_right window should exist");
+
+  // Verify all windows start in Tiling state
+  assert!(
+    matches!(upper_window.state(), WindowState::Tiling),
+    "upper window should start in Tiling state"
+  );
+
+  // Verify each window has a unique ID
+  let upper_id = upper_window.native_arc().as_ref().id();
+  let left_id = state
+    .find_window_by_title("left")
+    .expect("left window should exist")
+    .native_arc()
+    .as_ref()
+    .id();
+  let lower_id = state
+    .find_window_by_title("lower_right")
+    .expect("lower_right window should exist")
+    .native_arc()
+    .as_ref()
+    .id();
+  assert_ne!(upper_id, left_id, "windows should have unique IDs");
+  assert_ne!(upper_id, lower_id, "windows should have unique IDs");
+  assert_ne!(left_id, lower_id, "windows should have unique IDs");
+
+  // Toggle the upper_right window to fullscreen (maximized).
+  let fullscreen_state = WindowState::Fullscreen(FullscreenStateConfig {
+    maximized: true,
+    shown_on_top: false,
+  });
+
+  let target_state =
+    upper_window.toggled_state(fullscreen_state, &default_config());
+
+  let updated_window = crate::commands::window::update_window_state(
+    upper_window.clone(),
+    target_state,
+    &mut state,
+    &default_config(),
+  )
+  .expect("update_window_state should succeed");
+
+  // Verify the upper_right window is now fullscreen
+  assert!(
+    matches!(updated_window.state(), WindowState::Fullscreen(_)),
+    "upper_right should be in Fullscreen state after toggle, got {:?}",
+    updated_window.state()
+  );
+
+  // Verify the other windows are still tiling.
+  let left_window = state
+    .find_window_by_title("left")
+    .expect("left window should exist");
+  let lower_window = state
+    .find_window_by_title("lower_right")
+    .expect("lower_right window should exist");
+
+  assert!(
+    matches!(left_window.state(), WindowState::Tiling),
+    "left window should still be in Tiling state"
+  );
+  assert!(
+    matches!(lower_window.state(), WindowState::Tiling),
+    "lower_right window should still be in Tiling state"
+  );
+
+  // Verify that no maximize() calls have been made yet (platform_sync
+  // is needed to trigger native calls, and it requires focus tracking).
+  assert_eq!(
+    upper_tracker.maximize_called(),
+    0,
+    "maximize() should not be called until platform_sync runs"
+  );
+  assert_eq!(
+    left_tracker.maximize_called(),
+    0,
+    "maximize() should not be called on left window"
+  );
+  assert_eq!(
+    lower_tracker.maximize_called(),
+    0,
+    "maximize() should not be called on lower_right window"
+  );
+
+  // Directly call maximize() on the target window to verify the tracker
+  // works and that only the target window is affected.
+  updated_window
+    .native_arc()
+    .as_ref()
+    .maximize()
+    .expect("maximize should succeed on target window");
+
+  assert_eq!(
+    upper_tracker.maximize_called(),
+    1,
+    "maximize() should be called exactly once on the target window"
+  );
+  assert_eq!(
+    left_tracker.maximize_called(),
+    0,
+    "maximize() should not be called on the left window"
+  );
+  assert_eq!(
+    lower_tracker.maximize_called(),
+    0,
+    "maximize() should not be called on the lower_right window"
+  );
+}
+
+fn default_config() -> crate::user_config::UserConfig {
+  crate::user_config::UserConfig::mock()
+}

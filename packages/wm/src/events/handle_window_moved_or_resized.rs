@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use anyhow::Context;
 use wm_common::{
   try_warn, ActiveDrag, ActiveDragOperation, DisplayState,

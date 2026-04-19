@@ -93,6 +93,20 @@ impl UserConfig {
     Ok(())
   }
 
+  /// Creates a `UserConfig` with default values for use in tests.
+  #[cfg(test)]
+  pub fn mock() -> Self {
+    let config_value = ParsedConfig::default();
+    let window_rules_by_event = Self::window_rules_by_event(&config_value);
+
+    Self {
+      path: PathBuf::new(),
+      value: config_value,
+      value_str: String::new(),
+      window_rules_by_event,
+    }
+  }
+
   pub fn reload(&mut self) -> anyhow::Result<()> {
     let (config_value, config_str) = Self::read(&self.path)?;
 
