@@ -5,11 +5,11 @@ use tokio::sync::mpsc::{self};
 use tracing::warn;
 use uuid::Uuid;
 use wm_common::{BindingModeConfig, HideCorner, WindowState, WmEvent};
+#[cfg(target_os = "windows")]
+use wm_platform::OpacityValue;
 use wm_platform::{
   Direction, Dispatcher, Display, NativeWindow, Point, Rect, WindowId,
 };
-#[cfg(target_os = "windows")]
-use wm_platform::{NativeWindowWindowsExt, OpacityValue};
 
 use crate::{
   commands::{
@@ -699,7 +699,6 @@ impl Drop for WmState {
       // Reset any effects on Windows.
       #[cfg(target_os = "windows")]
       {
-        use wm_platform::NativeWindowWindowsExt;
         if let Err(err) = window
           .native_arc()
           .as_ref()

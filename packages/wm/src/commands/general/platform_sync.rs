@@ -6,8 +6,6 @@ use wm_common::{
   WindowState, WmEvent,
 };
 #[cfg(target_os = "windows")]
-use wm_platform::NativeWindowWindowsExt;
-#[cfg(target_os = "windows")]
 use wm_platform::{CornerStyle, OpacityValue};
 use wm_platform::{Rect, WindowZOrder};
 

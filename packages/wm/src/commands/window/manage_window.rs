@@ -115,8 +115,7 @@ fn check_is_manageable(
   #[cfg(target_os = "windows")]
   {
     use wm_platform::{
-      NativeWindowWindowsExt, WS_CAPTION, WS_CHILD, WS_EX_NOACTIVATE,
-      WS_EX_TOOLWINDOW,
+      WS_CAPTION, WS_CHILD, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
     };
 
     // TODO: Temporary fix for managing Flow Launcher until a force manage

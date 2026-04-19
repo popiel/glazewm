@@ -3,8 +3,6 @@ use tracing::{info, warn};
 #[cfg(target_os = "windows")]
 use wm_common::{HideMethod, ParsedConfig};
 use wm_common::{WindowRuleEvent, WmEvent};
-#[cfg(target_os = "windows")]
-use wm_platform::NativeWindowWindowsExt;
 
 use crate::{
   commands::{window::run_window_rules, workspace::sort_workspaces},

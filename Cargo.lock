@@ -3366,6 +3366,7 @@ dependencies = [
 name = "wm-platform"
 version = "0.0.0"
 dependencies = [
+ "bon",
  "home",
  "libtest-mimic-collect",
  "objc2",

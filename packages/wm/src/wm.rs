@@ -8,8 +8,6 @@ use wm_common::{
   FloatingStateConfig, FullscreenStateConfig, InvokeCommand, WindowState,
   WmEvent,
 };
-#[cfg(target_os = "windows")]
-use wm_platform::NativeWindowWindowsExt;
 use wm_platform::{
   Dispatcher, LengthValue, PlatformEvent, RectDelta, WindowEvent,
 };

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use wm_common::{FloatingStateConfig, TilingDirection, WindowState};
 
 use crate::{
@@ -296,18 +298,33 @@ fn test_multiple_monitors() {
 #[test]
 fn test_fullscreen_only_affects_target_window() {
   use wm_common::{FullscreenStateConfig, TilingDirection, WindowState};
-  use wm_platform::NativeWindowImpl;
+  use wm_platform::test_utils::{
+    CallTracker, MockNativeWindow, PlatformMethod,
+  };
 
-  let (left_tracker, window_left) =
-    NativeWindowImpl::mock_with_tracker(wm_platform::WindowId(1), "left");
-  let (upper_tracker, window_upper) = NativeWindowImpl::mock_with_tracker(
-    wm_platform::WindowId(2),
-    "upper_right",
-  );
-  let (lower_tracker, window_lower) = NativeWindowImpl::mock_with_tracker(
-    wm_platform::WindowId(3),
-    "lower_right",
-  );
+  let tracker = Arc::new(CallTracker::default());
+
+  let window_left = Arc::new(
+    MockNativeWindow::mock()
+      .id(wm_platform::WindowId(1))
+      .title("left".to_string())
+      .tracker(Arc::clone(&tracker))
+      .call(),
+  ) as Arc<dyn wm_platform::NativeWindow>;
+  let window_upper = Arc::new(
+    MockNativeWindow::mock()
+      .id(wm_platform::WindowId(2))
+      .title("upper_right".to_string())
+      .tracker(Arc::clone(&tracker))
+      .call(),
+  ) as Arc<dyn wm_platform::NativeWindow>;
+  let window_lower = Arc::new(
+    MockNativeWindow::mock()
+      .id(wm_platform::WindowId(3))
+      .title("lower_right".to_string())
+      .tracker(Arc::clone(&tracker))
+      .call(),
+  ) as Arc<dyn wm_platform::NativeWindow>;
 
   let mut state = WmState::mock()
     .monitors(vec![Monitor::mock()
@@ -415,19 +432,9 @@ fn test_fullscreen_only_affects_target_window() {
   // Verify that no maximize() calls have been made yet (platform_sync
   // is needed to trigger native calls, and it requires focus tracking).
   assert_eq!(
-    upper_tracker.maximize_called(),
+    tracker.call_count(PlatformMethod::Maximize),
     0,
     "maximize() should not be called until platform_sync runs"
-  );
-  assert_eq!(
-    left_tracker.maximize_called(),
-    0,
-    "maximize() should not be called on left window"
-  );
-  assert_eq!(
-    lower_tracker.maximize_called(),
-    0,
-    "maximize() should not be called on lower_right window"
   );
 
   // Directly call maximize() on the target window to verify the tracker
@@ -439,19 +446,29 @@ fn test_fullscreen_only_affects_target_window() {
     .expect("maximize should succeed on target window");
 
   assert_eq!(
-    upper_tracker.maximize_called(),
+    tracker.call_count(PlatformMethod::Maximize),
     1,
-    "maximize() should be called exactly once on the target window"
+    "maximize() should be called exactly once total"
+  );
+
+  assert_eq!(
+    tracker
+      .call_count_for(wm_platform::WindowId(2), PlatformMethod::Maximize),
+    1,
+    "upper_right should have exactly one Maximize call"
+  );
+
+  assert_eq!(
+    tracker
+      .call_count_for(wm_platform::WindowId(1), PlatformMethod::Maximize),
+    0,
+    "left window should have no Maximize calls"
   );
   assert_eq!(
-    left_tracker.maximize_called(),
+    tracker
+      .call_count_for(wm_platform::WindowId(3), PlatformMethod::Maximize),
     0,
-    "maximize() should not be called on the left window"
-  );
-  assert_eq!(
-    lower_tracker.maximize_called(),
-    0,
-    "maximize() should not be called on the lower_right window"
+    "lower_right window should have no Maximize calls"
   );
 }
 
