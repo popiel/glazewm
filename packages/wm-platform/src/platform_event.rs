@@ -80,7 +80,7 @@ pub enum WindowEvent {
 
 impl std::fmt::Debug for WindowEvent {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    let window_id = self.window().map(|w| w.id());
+    let window_id = self.window().map(NativeWindow::id);
     match self {
       Self::Focused { .. } => f
         .debug_struct("Focused")

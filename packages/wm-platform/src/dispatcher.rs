@@ -566,6 +566,11 @@ impl Dispatcher {
   }
 
   /// Gets the current cursor position.
+  ///
+  /// # Panics
+  ///
+  /// Panics if `test_utils` feature is enabled and the underlying mutex
+  /// is poisoned.
   pub fn cursor_position(&self) -> crate::Result<Point> {
     #[cfg(feature = "test_utils")]
     if self.source.is_none() {
@@ -637,6 +642,11 @@ impl Dispatcher {
   }
 
   /// Sets the cursor position to the specified coordinates.
+  ///
+  /// # Panics
+  ///
+  /// Panics if `test_utils` feature is enabled and the underlying mutex
+  /// is poisoned.
   pub fn set_cursor_position(&self, point: &Point) -> crate::Result<()> {
     #[cfg(feature = "test_utils")]
     if self.source.is_none() {

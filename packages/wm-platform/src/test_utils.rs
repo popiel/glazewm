@@ -331,6 +331,11 @@ impl PlatformCall {
   ///
   /// Returns `None` for `Dispatcher` calls, which are not associated with
   /// a specific window.
+  ///
+  /// # Panics
+  ///
+  /// Panics if the mutex is poisoned.
+  #[must_use]
   pub fn id(&self) -> Option<WindowId> {
     match self {
       Self::Id { id, .. }
@@ -386,6 +391,7 @@ impl PlatformCall {
   }
 
   /// Returns the [`PlatformMethod`] discriminator for this call.
+  #[must_use]
   pub fn method(&self) -> PlatformMethod {
     match self {
       Self::Id { .. } => PlatformMethod::Id,
@@ -498,11 +504,19 @@ pub struct CallTracker {
 
 impl CallTracker {
   /// Records a platform call.
+  ///
+  /// # Panics
+  ///
+  /// Panics if the mutex is poisoned.
   pub fn push(&self, call: PlatformCall) {
     self.calls.lock().unwrap().push(call);
   }
 
   /// Returns a snapshot of all recorded calls.
+  ///
+  /// # Panics
+  ///
+  /// Panics if the mutex is poisoned.
   pub fn calls(&self) -> Vec<PlatformCall> {
     self.calls.lock().unwrap().clone()
   }
@@ -510,6 +524,10 @@ impl CallTracker {
   /// Returns all calls made on the window with the given ID.
   ///
   /// Dispatcher calls (which have no window ID) are excluded.
+  ///
+  /// # Panics
+  ///
+  /// Panics if the mutex is poisoned.
   pub fn calls_for(&self, id: WindowId) -> Vec<PlatformCall> {
     self
       .calls
@@ -522,6 +540,10 @@ impl CallTracker {
   }
 
   /// Returns all calls made on the `Dispatcher` (no window ID).
+  ///
+  /// # Panics
+  ///
+  /// Panics if the mutex is poisoned.
   pub fn dispatcher_calls(&self) -> Vec<PlatformCall> {
     self
       .calls
@@ -534,6 +556,10 @@ impl CallTracker {
   }
 
   /// Returns the number of calls matching the given method.
+  ///
+  /// # Panics
+  ///
+  /// Panics if the mutex is poisoned.
   pub fn call_count(&self, method: PlatformMethod) -> usize {
     self
       .calls
@@ -546,6 +572,10 @@ impl CallTracker {
 
   /// Returns the number of calls matching the given method for a specific
   /// window.
+  ///
+  /// # Panics
+  ///
+  /// Panics if the mutex is poisoned.
   pub fn call_count_for(
     &self,
     id: WindowId,
@@ -561,6 +591,10 @@ impl CallTracker {
   }
 
   /// Clears all recorded calls and returns them.
+  ///
+  /// # Panics
+  ///
+  /// Panics if the mutex is poisoned.
   pub fn take_calls(&self) -> Vec<PlatformCall> {
     std::mem::take(&mut self.calls.lock().unwrap())
   }
@@ -602,6 +636,7 @@ impl CallTracker {
 /// side-channel: each method call pushes a [`PlatformCall`] via `&self`,
 /// so no mutable access to the mock itself is needed. This allows call
 /// tracking on mocks that have been erased behind `Arc<dyn NativeWindow>`.
+#[allow(clippy::struct_excessive_bools)]
 pub struct MockNativeWindow {
   id: WindowId,
   title: String,
@@ -1172,6 +1207,17 @@ impl std::fmt::Debug for MockNativeWindow {
     f.debug_struct("MockNativeWindow")
       .field("id", &self.id)
       .field("title", &self.title)
+      .field("process_name", &self.process_name)
+      .field("frame", &self.frame)
+      .field("position", &self.position)
+      .field("size", &self.size)
+      .field("is_valid", &self.is_valid)
+      .field("is_visible", &self.is_visible)
+      .field("is_minimized", &self.is_minimized)
+      .field("is_maximized", &self.is_maximized)
+      .field("is_resizable", &self.is_resizable)
+      .field("is_desktop_window", &self.is_desktop_window)
+      .field("tracker", &self.tracker.as_ref().map(|_| "CallTracker"))
       .finish()
   }
 }

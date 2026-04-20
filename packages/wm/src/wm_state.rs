@@ -6,6 +6,8 @@ use tracing::warn;
 use uuid::Uuid;
 use wm_common::{BindingModeConfig, HideCorner, WindowState, WmEvent};
 #[cfg(target_os = "windows")]
+use wm_platform::NativeWindowWindowsExt;
+#[cfg(target_os = "windows")]
 use wm_platform::OpacityValue;
 use wm_platform::{
   Direction, Dispatcher, Display, NativeWindow, Point, Rect, WindowId,
@@ -703,7 +705,7 @@ impl Drop for WmState {
           .native_arc()
           .as_ref()
           .as_windows_ext()
-          .map(|ext| ext.show())
+          .map(NativeWindowWindowsExt::show)
         {
           warn!("Failed to show window: {:?}", err);
         }

@@ -349,6 +349,7 @@ fn redraw_containers(
   Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 fn reposition_window(
   window: &WindowContainer,
   hide_corner: HideCorner,
