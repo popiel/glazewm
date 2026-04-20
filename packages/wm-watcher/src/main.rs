@@ -8,7 +8,9 @@
 use anyhow::Context;
 use wm_common::{ClientResponseData, ContainerDto, WindowDto, WmEvent};
 use wm_ipc_client::IpcClient;
-use wm_platform::{NativeWindow, NativeWindowWindowsExt, OpacityValue};
+use wm_platform::{
+  NativeWindowImpl, NativeWindowWindowsExt, OpacityValue,
+};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -38,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
       );
 
       let managed_windows =
-        managed_handles.into_iter().map(NativeWindow::from_handle);
+        managed_handles.into_iter().map(NativeWindowImpl::from_handle);
 
       for window in managed_windows {
         if let Err(err) = window.show() {
