@@ -39,7 +39,7 @@ impl UserConfig {
   pub fn new(config_path: Option<PathBuf>) -> anyhow::Result<Self> {
     let default_config_path = home::home_dir()
       .context("Unable to get home directory.")?
-      .join(".glzr/glazewm/config.yaml");
+      .join(".config/glazewm/config.yaml");
 
     let config_path = config_path
       .or_else(|| env::var("GLAZEWM_CONFIG_PATH").ok().map(PathBuf::from))
