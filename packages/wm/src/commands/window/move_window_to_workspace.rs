@@ -13,6 +13,11 @@ use crate::{
   wm_state::WmState,
 };
 
+/// Moves a window to a workspace.
+///
+/// # Errors
+///
+/// Returns an error if the window has no workspace or monitor.
 pub fn move_window_to_workspace(
   window: WindowContainer,
   target: WorkspaceTarget,

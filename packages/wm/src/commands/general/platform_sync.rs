@@ -16,13 +16,18 @@ use crate::{
   wm_state::WmState,
 };
 
+/// Synchronizes the window manager state with the platform.
+///
+/// # Errors
+///
+/// Returns an error if focus or redraw operations fail.
 pub fn platform_sync(
   state: &mut WmState,
   config: &UserConfig,
 ) -> anyhow::Result<()> {
   // Process due delayed border effects first
   if state.pending_sync.has_due_border_effects() {
-    process_due_border_effects(state, config)?;
+    process_due_border_effects(state, config);
   }
 
   let focused_container =
@@ -625,10 +630,7 @@ fn apply_border_effect(
 }
 
 #[cfg(target_os = "windows")]
-fn process_due_border_effects(
-  state: &mut WmState,
-  config: &UserConfig,
-) -> anyhow::Result<()> {
+fn process_due_border_effects(state: &mut WmState, config: &UserConfig) {
   let due_border_window_ids = state.pending_sync.get_due_border_effects();
   let window_effects = &config.value.window_effects;
 
@@ -640,7 +642,7 @@ fn process_due_border_effects(
         == state
           .prev_effects_window
           .as_ref()
-          .map(|w| w.id())
+          .map(CommonGetters::id)
           .unwrap_or_default()
       {
         &window_effects.focused_window
@@ -656,8 +658,6 @@ fn process_due_border_effects(
       }
     }
   }
-
-  Ok(())
 }
 
 #[cfg(target_os = "windows")]

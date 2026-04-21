@@ -13,6 +13,12 @@ use crate::{
   wm_state::WmState,
 };
 
+/// Removes a monitor from the window manager.
+///
+/// # Errors
+///
+/// Returns an error if no target monitor exists or if workspaces cannot be
+/// moved or detached.
 #[allow(clippy::needless_pass_by_value)]
 pub fn remove_monitor(
   monitor: Monitor,

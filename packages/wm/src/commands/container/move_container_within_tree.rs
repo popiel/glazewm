@@ -20,6 +20,10 @@ use crate::{models::Container, traits::CommonGetters, wm_state::WmState};
 /// container, which can cause the target parent to become detached. For
 /// example, in the layout V[1 H[2]] where container 1 is moved down, the
 /// parent gets removed resulting in V[1 2].
+///
+/// # Errors
+///
+/// Returns an error if the container cannot be detached or attached.
 pub fn move_container_within_tree(
   container_to_move: &Container,
   target_parent: &Container,
@@ -175,6 +179,7 @@ fn move_to_lowest_common_ancestor(
 
 /// Gets the lowest container in the tree that has both `container_a` and
 /// `container_b` as descendants.
+#[must_use]
 pub fn lowest_common_ancestor(
   container_a: &Container,
   container_b: &Container,

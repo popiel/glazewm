@@ -10,6 +10,12 @@ use crate::{
   wm_state::WmState,
 };
 
+/// Ignores a window, removing it from tiling management.
+///
+/// # Errors
+///
+/// Returns an error if the window cannot be detached or if flattening
+/// fails.
 #[allow(clippy::needless_pass_by_value)]
 pub fn ignore_window(
   window: WindowContainer,

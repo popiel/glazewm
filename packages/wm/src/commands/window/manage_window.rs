@@ -19,6 +19,11 @@ use crate::{
   wm_state::WmState,
 };
 
+/// Manages a new native window.
+///
+/// # Errors
+///
+/// Returns an error if the window cannot be created or attached.
 pub fn manage_window(
   native_window: Rc<dyn NativeWindow>,
   target_parent: Option<Container>,

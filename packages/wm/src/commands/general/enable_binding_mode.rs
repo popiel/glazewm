@@ -3,6 +3,11 @@ use wm_common::WmEvent;
 
 use crate::{user_config::UserConfig, wm_state::WmState};
 
+/// Enables a binding mode by name.
+///
+/// # Errors
+///
+/// Returns an error if no binding mode with the given name exists.
 pub fn enable_binding_mode(
   name: &str,
   state: &mut WmState,

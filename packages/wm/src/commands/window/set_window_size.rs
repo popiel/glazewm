@@ -15,6 +15,11 @@ use crate::{
 const MIN_FLOATING_WIDTH: i32 = 250;
 const MIN_FLOATING_HEIGHT: i32 = 140;
 
+/// Sets a window's size.
+///
+/// # Errors
+///
+/// Returns an error if the window's size cannot be set.
 pub fn set_window_size(
   window: WindowContainer,
   target_width: Option<LengthValue>,

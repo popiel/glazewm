@@ -13,6 +13,10 @@ use crate::{
 /// H[1 H[2, 3]] -> H[1, 2, 3]
 /// H[V[1]] -> V[1]
 /// ```
+///
+/// # Errors
+///
+/// Returns an error if flattening a split container fails.
 pub fn flatten_child_split_containers(
   parent: &Container,
 ) -> anyhow::Result<()> {

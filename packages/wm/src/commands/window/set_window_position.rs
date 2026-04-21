@@ -13,6 +13,11 @@ pub enum WindowPositionTarget {
   Coordinates(Option<i32>, Option<i32>),
 }
 
+/// Sets a window's position.
+///
+/// # Errors
+///
+/// Returns an error if the window's position cannot be set.
 pub fn set_window_position(
   window: WindowContainer,
   target: &WindowPositionTarget,

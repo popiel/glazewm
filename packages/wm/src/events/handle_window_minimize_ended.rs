@@ -13,8 +13,8 @@ pub fn handle_window_minimize_ended(
   config: &UserConfig,
 ) -> anyhow::Result<()> {
   let native_window =
-    state.root_container.get_native_window(&native_window_id);
-  let native_window_ref = native_window.as_ref().map(|w| w.as_ref());
+    state.root_container.get_native_window(native_window_id);
+  let native_window_ref = native_window.as_ref().map(AsRef::as_ref);
   let found_window = if let Some(nw) = native_window_ref {
     state.window_from_native(nw)
   } else {

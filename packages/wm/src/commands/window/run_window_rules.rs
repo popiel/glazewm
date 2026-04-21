@@ -11,6 +11,10 @@ use crate::{
 
 /// Returns the window (if it's still attached) after running the window
 /// rules.
+///
+/// # Errors
+///
+/// Returns an error if the window rule evaluation fails.
 pub fn run_window_rules(
   window: WindowContainer,
   event_type: &WindowRuleEvent,

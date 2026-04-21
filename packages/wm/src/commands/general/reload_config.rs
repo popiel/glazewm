@@ -14,6 +14,11 @@ use crate::{
   wm_state::WmState,
 };
 
+/// Reloads the user configuration.
+///
+/// # Errors
+///
+/// Returns an error if the config file cannot be reloaded.
 pub fn reload_config(
   state: &mut WmState,
   config: &mut UserConfig,

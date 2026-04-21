@@ -3,17 +3,13 @@
 //! This module provides default values and helper functions used by the
 //! mock builders in the model modules.
 
-use std::sync::Arc;
-
 use bon::bon;
 use tokio::sync::mpsc;
 use wm_common::{
   FloatingStateConfig, GapsConfig, TilingDirection, WindowState, WmEvent,
   WorkspaceConfig,
 };
-use wm_platform::{
-  Dispatcher, Display, NativeWindow, NativeWindowImpl, Rect, RectDelta,
-};
+use wm_platform::{Dispatcher, Display, Rect, RectDelta};
 
 use crate::{
   commands::container::attach_container,
@@ -153,9 +149,8 @@ impl NonTilingWindow {
     #[builder(default = mock_window_rect())] floating_placement: Rect,
     #[builder(default = WindowState::Floating(FloatingStateConfig::default()))]
     state: WindowState,
-    #[builder(default = NativeWindowImpl::mock())] native: Arc<
-      dyn NativeWindow,
-    >,
+    #[builder(default = wm_platform::WindowId(0))]
+    native_id: wm_platform::WindowId,
   ) -> Self {
     let properties = NativeWindowProperties::mock()
       .title(title)
@@ -165,7 +160,7 @@ impl NonTilingWindow {
 
     Self::new(
       None,
-      native,
+      native_id,
       properties,
       state,
       None,
@@ -209,9 +204,8 @@ impl TilingWindow {
     #[builder(default = String::new())] process_name: String,
     #[builder(default = mock_window_rect())] floating_placement: Rect,
     #[builder(default = GapsConfig::default())] gaps_config: GapsConfig,
-    #[builder(default = NativeWindowImpl::mock())] native: Arc<
-      dyn NativeWindow,
-    >,
+    #[builder(default = wm_platform::WindowId(0))]
+    native_id: wm_platform::WindowId,
   ) -> Self {
     let properties = NativeWindowProperties::mock()
       .title(title)
@@ -221,7 +215,7 @@ impl TilingWindow {
 
     let window = Self::new(
       None,
-      native,
+      native_id,
       properties,
       None,
       mock_border_delta(),

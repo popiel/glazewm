@@ -25,8 +25,8 @@ pub fn handle_window_destroyed(
     info!("Window closed: {window}");
     unmanage_window(window, state)?;
 
-    state.root_container.remove_native_window(&native_id);
-    state.pending_sync.remove_delayed_border_effect(&native_id);
+    state.root_container.remove_native_window(native_id);
+    state.pending_sync.remove_delayed_border_effect(native_id);
 
     // Destroy parent workspace if window was killed while its workspace
     // was not displayed (e.g. via task manager).

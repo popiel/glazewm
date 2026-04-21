@@ -186,10 +186,10 @@ impl PendingSync {
     due
   }
 
-  pub fn remove_delayed_border_effect(&mut self, window_id: &WindowId) {
+  pub fn remove_delayed_border_effect(&mut self, window_id: WindowId) {
     self
       .delayed_border_effects
-      .retain(|e| e.window_id != *window_id);
+      .retain(|e| e.window_id != window_id);
   }
 
   pub fn has_due_border_effects(&self) -> bool {

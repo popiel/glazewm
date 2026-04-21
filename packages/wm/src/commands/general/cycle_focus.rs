@@ -13,6 +13,11 @@ use crate::{
 /// tiling.
 ///
 /// Does nothing if a workspace is focused.
+///
+/// # Errors
+///
+/// Returns an error if no focused container exists or if no workspace is
+/// found.
 #[allow(clippy::fn_params_excessive_bools)]
 pub fn cycle_focus(
   omit_floating: bool,

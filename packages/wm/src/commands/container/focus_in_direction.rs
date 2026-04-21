@@ -9,6 +9,11 @@ use crate::{
   wm_state::WmState,
 };
 
+/// Focuses the next container in the given direction.
+///
+/// # Errors
+///
+/// Returns an error if the container tree cannot be traversed.
 pub fn focus_in_direction(
   origin_container: &Container,
   direction: &Direction,

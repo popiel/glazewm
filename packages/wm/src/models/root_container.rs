@@ -60,16 +60,16 @@ impl RootContainer {
 
   pub fn get_native_window(
     &self,
-    id: &WindowId,
+    id: WindowId,
   ) -> Option<Rc<dyn NativeWindow>> {
-    self.0.borrow().native_windows.get(id).cloned()
+    self.0.borrow().native_windows.get(&id).cloned()
   }
 
   pub fn remove_native_window(
     &self,
-    id: &WindowId,
+    id: WindowId,
   ) -> Option<Rc<dyn NativeWindow>> {
-    self.0.borrow_mut().native_windows.remove(id)
+    self.0.borrow_mut().native_windows.remove(&id)
   }
 
   pub fn monitors(&self) -> Vec<Monitor> {

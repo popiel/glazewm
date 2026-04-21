@@ -10,6 +10,11 @@ use crate::{
 /// Replaces a container at the specified index.
 ///
 /// The replaced container will be detached from the tree.
+///
+/// # Errors
+///
+/// Returns an error if the replacement container is already attached or
+/// if no container exists at the given index.
 pub fn replace_container(
   replacement_container: &Container,
   target_parent: &Container,

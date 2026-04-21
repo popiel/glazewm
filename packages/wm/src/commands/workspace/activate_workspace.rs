@@ -18,6 +18,10 @@ use crate::{
 ///
 /// If no target monitor is provided, the workspace is activated on
 /// whichever monitor it is bound to, or the currently focused monitor.
+///
+/// # Errors
+///
+/// Returns an error if no suitable workspace can be found.
 pub fn activate_workspace(
   workspace_name: Option<&str>,
   target_monitor: Option<Monitor>,

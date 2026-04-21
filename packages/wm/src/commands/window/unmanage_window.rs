@@ -11,6 +11,12 @@ use crate::{
   wm_state::WmState,
 };
 
+/// Unmanages a window, removing it from the window manager.
+///
+/// # Errors
+///
+/// Returns an error if the window cannot be detached or if flattening
+/// fails.
 #[allow(clippy::needless_pass_by_value)]
 pub fn unmanage_window(
   window: WindowContainer,

@@ -9,6 +9,11 @@ use wm_platform::DispatcherExtWindows;
 
 use crate::wm_state::WmState;
 
+/// Executes a shell command.
+///
+/// # Errors
+///
+/// Returns an error if the command cannot be parsed or executed.
 pub fn shell_exec(
   command: &str,
   // LINT: `hide_window` is only used on Windows.

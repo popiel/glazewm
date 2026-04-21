@@ -1,6 +1,6 @@
 use crate::{
   platform_impl::WindowEventNotificationInner, Keybinding, MouseEventKind,
-  NativeWindow, Point, WindowId,
+  Point, WindowId,
 };
 
 #[derive(Clone, Debug)]

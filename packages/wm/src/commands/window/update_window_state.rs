@@ -17,6 +17,10 @@ use crate::{
 /// Adds the window for redraw if there is a state change.
 ///
 /// Returns the window after the state change.
+///
+/// # Errors
+///
+/// Returns an error if the state transition fails.
 pub fn update_window_state(
   window: WindowContainer,
   target_state: WindowState,

@@ -20,8 +20,8 @@ pub fn handle_window_focused(
   config: &mut UserConfig,
 ) -> anyhow::Result<()> {
   let native_window =
-    state.root_container.get_native_window(&native_window_id);
-  let native_window_ref = native_window.as_ref().map(|w| w.as_ref());
+    state.root_container.get_native_window(native_window_id);
+  let native_window_ref = native_window.as_ref().map(AsRef::as_ref);
   let found_window = if let Some(nw) = native_window_ref {
     state.window_from_native(nw)
   } else {
@@ -34,9 +34,9 @@ pub fn handle_window_focused(
   // the WM's focused container, then the focus is not synced.
   state.is_focus_synced = match focused_container.as_window_container() {
     Ok(window) => window.native().id() == native_window_id,
-    _ => native_window
-      .map(|w| w.is_desktop_window().unwrap_or(false))
-      .unwrap_or(false),
+    _ => {
+      native_window.is_some_and(|w| w.is_desktop_window().unwrap_or(false))
+    }
   };
 
   // Handle overriding focus on close/minimize. After a window is closed

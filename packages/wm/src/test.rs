@@ -300,34 +300,15 @@ fn test_multiple_monitors() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn test_fullscreen_only_affects_target_window() {
-  use wm_platform::test_utils::{
-    CallTracker, MockNativeWindow, PlatformMethod,
-  };
+  use wm_platform::test_utils::{CallTracker, PlatformMethod};
 
   let tracker = Arc::new(CallTracker::default());
 
-  let window_left = Arc::new(
-    MockNativeWindow::mock()
-      .id(wm_platform::WindowId(1))
-      .title("left".to_string())
-      .tracker(Arc::clone(&tracker))
-      .call(),
-  ) as Arc<dyn wm_platform::NativeWindow>;
-  let window_upper = Arc::new(
-    MockNativeWindow::mock()
-      .id(wm_platform::WindowId(2))
-      .title("upper_right".to_string())
-      .tracker(Arc::clone(&tracker))
-      .call(),
-  ) as Arc<dyn wm_platform::NativeWindow>;
-  let window_lower = Arc::new(
-    MockNativeWindow::mock()
-      .id(wm_platform::WindowId(3))
-      .title("lower_right".to_string())
-      .tracker(Arc::clone(&tracker))
-      .call(),
-  ) as Arc<dyn wm_platform::NativeWindow>;
+  let window_left = wm_platform::WindowId(1);
+  let window_upper = wm_platform::WindowId(2);
+  let window_lower = wm_platform::WindowId(3);
 
   let dispatcher =
     wm_platform::Dispatcher::mock_with_tracker(Arc::clone(&tracker));
@@ -341,7 +322,7 @@ fn test_fullscreen_only_affects_target_window() {
           .tiling_containers(vec![
             TilingWindow::mock()
               .title("left".into())
-              .native(window_left)
+              .native_id(window_left)
               .call()
               .into(),
             SplitContainer::mock()
@@ -349,12 +330,12 @@ fn test_fullscreen_only_affects_target_window() {
               .tiling_containers(vec![
                 TilingWindow::mock()
                   .title("upper_right".into())
-                  .native(window_upper)
+                  .native_id(window_upper)
                   .call()
                   .into(),
                 TilingWindow::mock()
                   .title("lower_right".into())
-                  .native(window_lower)
+                  .native_id(window_lower)
                   .call()
                   .into(),
               ])

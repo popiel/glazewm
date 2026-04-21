@@ -7,6 +7,11 @@ use crate::{
   wm_state::WmState,
 };
 
+/// Resizes a window by the given delta values.
+///
+/// # Errors
+///
+/// Returns an error if the window's position cannot be determined.
 pub fn resize_window(
   window: &WindowContainer,
   width_delta: Option<LengthValue>,

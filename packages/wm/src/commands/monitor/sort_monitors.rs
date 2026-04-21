@@ -5,6 +5,10 @@ use crate::{
 
 /// Sorts the root container's monitors from left-to-right and
 /// top-to-bottom.
+///
+/// # Errors
+///
+/// Returns an error if a monitor's position cannot be determined.
 pub fn sort_monitors(root: &RootContainer) -> anyhow::Result<()> {
   let monitors = root.monitors();
 

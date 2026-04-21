@@ -22,6 +22,11 @@ use crate::{
 /// The distance in pixels to snap the window to the monitor's edge.
 const SNAP_DISTANCE: i32 = 15;
 
+/// Moves a window in the given direction.
+///
+/// # Errors
+///
+/// Returns an error if the window cannot be moved in the given direction.
 pub fn move_window_in_direction(
   window: WindowContainer,
   direction: &Direction,

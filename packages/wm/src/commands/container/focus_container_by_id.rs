@@ -4,6 +4,11 @@ use uuid::Uuid;
 use super::set_focused_descendant;
 use crate::wm_state::WmState;
 
+/// Focuses a container by its ID.
+///
+/// # Errors
+///
+/// Returns an error if no container with the given ID exists.
 pub fn focus_container_by_id(
   container_id: &Uuid,
   state: &mut WmState,

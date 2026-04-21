@@ -9,6 +9,12 @@ use crate::{
   wm_state::WmState,
 };
 
+/// Toggles the tiling direction of a container.
+///
+/// # Errors
+///
+/// Returns an error if the container cannot be wrapped in a split
+/// container.
 pub fn toggle_tiling_direction(
   container: Container,
   state: &mut WmState,
@@ -80,6 +86,11 @@ fn toggle_window_direction(
   Ok(split_container.into())
 }
 
+/// Sets the tiling direction of a container.
+///
+/// # Errors
+///
+/// Returns an error if the container has no direction container.
 pub fn set_tiling_direction(
   container: Container,
   state: &mut WmState,

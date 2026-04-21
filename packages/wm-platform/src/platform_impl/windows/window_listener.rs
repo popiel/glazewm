@@ -1,4 +1,4 @@
-use std::sync::{Arc, OnceLock};
+use std::sync::OnceLock;
 
 use tokio::sync::mpsc;
 use windows::Win32::{
@@ -16,8 +16,7 @@ use windows::Win32::{
   },
 };
 
-use super::NativeWindow;
-use crate::{Dispatcher, NativeWindowImpl, WindowEvent, WindowId};
+use crate::{Dispatcher, WindowEvent, WindowId};
 
 thread_local! {
   /// Sender for window events. For use with hook procedure.

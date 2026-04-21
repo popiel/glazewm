@@ -7,6 +7,11 @@ use crate::{
   traits::{CommonGetters, TilingSizeGetters},
 };
 
+/// Wraps children in a split container.
+///
+/// # Errors
+///
+/// Returns an error if the starting index cannot be determined.
 pub fn wrap_in_split_container(
   split_container: &SplitContainer,
   target_parent: &Container,

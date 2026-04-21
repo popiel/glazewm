@@ -6,6 +6,11 @@ use crate::{
 };
 
 /// Focuses a monitor by a given monitor index.
+///
+/// # Errors
+///
+/// Returns an error if no monitor exists at the given index or if the
+/// workspace cannot be focused.
 pub fn focus_monitor(
   monitor_index: usize,
   state: &mut WmState,

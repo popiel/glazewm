@@ -19,6 +19,11 @@ use crate::{
 /// in a given direction from the currently focused workspace.
 ///
 /// The workspace will be activated if it isn't already active.
+///
+/// # Errors
+///
+/// Returns an error if no workspace is currently focused or if the target
+/// workspace cannot be found.
 pub fn focus_workspace(
   target: WorkspaceTarget,
   state: &mut WmState,

@@ -9,6 +9,11 @@ use crate::{
 /// Inserts a child container at the specified index.
 ///
 /// The inserted child will be resized to fit the available space.
+///
+/// # Errors
+///
+/// Returns an error if the child is already attached to a parent
+/// container.
 pub fn attach_container(
   child: &Container,
   target_parent: &Container,

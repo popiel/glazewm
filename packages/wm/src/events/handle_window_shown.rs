@@ -1,8 +1,6 @@
-use std::rc::Rc;
-
 use tracing::info;
 use wm_common::{DisplayState, HideMethod};
-use wm_platform::{NativeWindow, WindowId};
+use wm_platform::WindowId;
 
 use crate::{
   commands::window::manage_window, traits::WindowGetters,
@@ -15,8 +13,8 @@ pub fn handle_window_shown(
   config: &mut UserConfig,
 ) -> anyhow::Result<()> {
   let native_window =
-    state.root_container.get_native_window(&native_window_id);
-  let native_window_ref = native_window.as_ref().map(|w| w.as_ref());
+    state.root_container.get_native_window(native_window_id);
+  let native_window_ref = native_window.as_ref().map(AsRef::as_ref);
   let found_window = if let Some(nw) = native_window_ref {
     state.window_from_native(nw)
   } else {
@@ -38,7 +36,7 @@ pub fn handle_window_shown(
     // If the window is not managed and not explicitly ignored, we need to
     // get or create the native window from the ID.
     if let Some(native_rc) =
-      state.root_container.get_native_window(&native_window_id)
+      state.root_container.get_native_window(native_window_id)
     {
       manage_window(native_rc, None, state, config)?;
     }

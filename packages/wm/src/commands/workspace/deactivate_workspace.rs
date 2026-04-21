@@ -8,6 +8,10 @@ use crate::{
 
 /// Deactivates a given workspace. This removes the container from its
 /// parent monitor and emits a `WorkspaceDeactivated` event.
+///
+/// # Errors
+///
+/// Returns an error if the workspace cannot be detached.
 #[allow(clippy::needless_pass_by_value)]
 pub fn deactivate_workspace(
   workspace: Workspace,

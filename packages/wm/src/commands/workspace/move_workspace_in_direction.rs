@@ -11,6 +11,11 @@ use crate::{
   wm_state::WmState,
 };
 
+/// Moves a workspace to a monitor in the given direction.
+///
+/// # Errors
+///
+/// Returns an error if the workspace has no monitor or cannot be moved.
 pub fn move_workspace_in_direction(
   workspace: &Workspace,
   direction: &Direction,

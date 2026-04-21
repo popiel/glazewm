@@ -14,6 +14,12 @@ use crate::{
   wm_state::WmState,
 };
 
+/// Adds a new monitor to the window manager.
+///
+/// # Errors
+///
+/// Returns an error if the monitor cannot be attached to the root
+/// container.
 pub fn add_monitor(
   native_display: Display,
   native_properties: NativeMonitorProperties,
@@ -39,6 +45,11 @@ pub fn add_monitor(
   Ok(monitor)
 }
 
+/// Moves workspaces bound to a monitor index to a new monitor.
+///
+/// # Errors
+///
+/// Returns an error if workspaces cannot be moved or activated.
 pub fn move_bounded_workspaces_to_new_monitor(
   monitor: &Monitor,
   state: &mut WmState,
@@ -90,6 +101,12 @@ pub fn move_bounded_workspaces_to_new_monitor(
 
 // TODO: Move to its own file once `swap-workspace` PR is merged.
 // Ref: https://github.com/glzr-io/glazewm/pull/980.
+
+/// Moves a workspace to a different monitor.
+///
+/// # Errors
+///
+/// Returns an error if the workspace has no monitor or cannot be moved.
 pub fn move_workspace_to_monitor(
   workspace: &Workspace,
   target_monitor: &Monitor,

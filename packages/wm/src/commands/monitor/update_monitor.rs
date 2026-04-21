@@ -7,6 +7,11 @@ use crate::{
   wm_state::WmState,
 };
 
+/// Updates a monitor's native display and properties.
+///
+/// # Errors
+///
+/// Returns an error if the monitor cannot be serialized to DTO.
 pub fn update_monitor(
   monitor: &Monitor,
   native_display: &Display,

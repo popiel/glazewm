@@ -18,8 +18,8 @@ use crate::{
   impl_window_getters,
   models::{
     Container, DirectionContainer, InsertionTarget,
-    NativeWindowProperties, NonTilingWindow, RootContainer,
-    TilingContainer, WindowContainer,
+    NativeWindowProperties, NonTilingWindow, TilingContainer,
+    WindowContainer,
   },
   traits::{
     CommonGetters, PositionGetters, TilingDirectionGetters,
@@ -94,7 +94,7 @@ impl TilingWindow {
   pub fn native(&self) -> Rc<dyn NativeWindow> {
     self
       .ancestor_root()
-      .get_native_window(&self.native_id())
+      .get_native_window(self.native_id())
       .expect("Native window not found")
   }
 

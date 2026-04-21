@@ -6,6 +6,10 @@ use crate::{
 };
 
 /// Sorts a monitor's workspaces by config order.
+///
+/// # Errors
+///
+/// Returns an error if a workspace's target index cannot be determined.
 pub fn sort_workspaces(
   monitor: &Monitor,
   config: &UserConfig,

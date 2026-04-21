@@ -7,6 +7,12 @@ use crate::{
   wm_state::WmState,
 };
 
+/// Updates a workspace's configuration.
+///
+/// # Errors
+///
+/// Returns an error if the workspace name already exists or if sorting
+/// fails.
 pub fn update_workspace_config(
   workspace: &Workspace,
   state: &WmState,

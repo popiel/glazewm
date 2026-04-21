@@ -224,7 +224,7 @@ async fn start_wm(
           let result = wm.state.cleanup_invalid_windows();
           // Check for due delayed border effects
           if wm.state.pending_sync.has_due_border_effects() {
-            platform_sync(&mut wm.state, &mut config)?;
+            platform_sync(&mut wm.state, &config)?;
           }
           result
         }

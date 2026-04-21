@@ -129,7 +129,6 @@ impl WmState {
       self.dispatcher.visible_windows()?.into_iter().rev()
     {
       let native_rc: Rc<dyn NativeWindow> = Rc::new(native_window);
-      let native_window_id = native_rc.id();
       let nearest_workspace = self
         .nearest_monitor(native_rc.as_ref())
         .and_then(|m| m.displayed_workspace());
