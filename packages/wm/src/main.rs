@@ -30,11 +30,11 @@ use wm_platform::{
 };
 
 use crate::{
-  ipc_server::IpcServer, sys_tray::SystemTray, user_config::UserConfig,
-  wm::WindowManager,
+  commands::general::platform_sync, ipc_server::IpcServer,
+  sys_tray::SystemTray, user_config::UserConfig, wm::WindowManager,
 };
 
-mod commands;
+pub mod commands;
 mod events;
 mod ipc_server;
 mod models;
@@ -220,7 +220,13 @@ async fn start_wm(
         if wm.state.is_paused {
           Ok(())
         } else {
-          wm.state.cleanup_invalid_windows()
+          // Cleanup invalid windows
+          let result = wm.state.cleanup_invalid_windows();
+          // Check for due delayed border effects
+          if wm.state.pending_sync.has_due_border_effects() {
+            platform_sync(&mut wm.state, &mut config)?;
+          }
+          result
         }
       },
       Some((

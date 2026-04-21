@@ -36,9 +36,7 @@ pub fn run_window_rules(
       // Update the subject container in case the container type changes.
       // For example, when going from a tiling to a floating window.
       subject_window = if subject_window.is_detached() {
-        match state
-          .window_from_native(subject_window.native_arc().as_ref())
-        {
+        match state.window_from_native(subject_window.native().as_ref()) {
           Some(window) => window,
           None => return Ok(None),
         }

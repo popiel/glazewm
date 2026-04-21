@@ -15,14 +15,18 @@ pub fn handle_window_destroyed(
   let found_window = state
     .windows()
     .into_iter()
-    .find(|window| window.native_arc().as_ref().id() == native_window_id);
+    .find(|window| window.native_id() == native_window_id);
 
   // Unmanage the window if it's currently managed.
   if let Some(window) = found_window {
     let workspace = window.workspace().context("No workspace.")?;
+    let native_id = window.native_id();
 
     info!("Window closed: {window}");
     unmanage_window(window, state)?;
+
+    state.root_container.remove_native_window(&native_id);
+    state.pending_sync.remove_delayed_border_effect(&native_id);
 
     // Destroy parent workspace if window was killed while its workspace
     // was not displayed (e.g. via task manager).

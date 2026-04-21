@@ -47,8 +47,7 @@ pub fn reload_config(
   {
     for window in state.windows() {
       let _ = window
-        .native_arc()
-        .as_ref()
+        .native()
         .as_windows_ext()
         .map(NativeWindowWindowsExt::show);
     }
@@ -63,8 +62,7 @@ pub fn reload_config(
   {
     for window in state.windows() {
       let _ = window
-        .native_arc()
-        .as_ref()
+        .native()
         .as_windows_ext()
         .map(|ext| ext.set_taskbar_visibility(true));
     }
@@ -183,8 +181,7 @@ fn update_window_effects(
   {
     if let Ok(window) = focused_container.as_window_container() {
       _ = window
-        .native_arc()
-        .as_ref()
+        .native()
         .as_windows_ext()
         .map(|ext| ext.set_border_color(None));
     }
@@ -200,8 +197,7 @@ fn update_window_effects(
 
     for window in unfocused_windows {
       _ = window
-        .native_arc()
-        .as_ref()
+        .native()
         .as_windows_ext()
         .map(|ext| ext.set_border_color(None));
     }

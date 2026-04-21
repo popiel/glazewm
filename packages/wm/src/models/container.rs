@@ -1,7 +1,7 @@
 use std::{
   cell::{Ref, RefMut},
   collections::VecDeque,
-  sync::Arc,
+  rc::Rc,
 };
 
 use ambassador::Delegate;
@@ -11,7 +11,7 @@ use wm_common::{
   ActiveDrag, ContainerDto, DisplayState, GapsConfig, TilingDirection,
   WindowRuleConfig, WindowState,
 };
-use wm_platform::{Direction, NativeWindow, Rect, RectDelta};
+use wm_platform::{Direction, NativeWindow, Rect, RectDelta, WindowId};
 
 #[allow(clippy::wildcard_imports)]
 use crate::{
@@ -162,7 +162,7 @@ impl std::fmt::Display for WindowContainer {
     write!(
       f,
       "Window(id={:?}, process={}, class={}, title={})",
-      self.native_arc().as_ref().id(),
+      self.native_id(),
       process,
       class,
       title,

@@ -5,7 +5,7 @@ use wm_common::{
 };
 #[cfg(target_os = "macos")]
 use wm_platform::{LengthValue, MouseButton, RectDelta};
-use wm_platform::{NativeWindow, Rect};
+use wm_platform::{Rect, WindowId};
 
 use crate::{
   commands::{
@@ -21,7 +21,7 @@ use crate::{
 
 #[allow(clippy::too_many_lines)]
 pub fn handle_window_moved_or_resized(
-  native_window: &dyn NativeWindow,
+  native_window_id: WindowId,
   // LINT: `is_interactive_start` is only used on Windows.
   #[cfg_attr(not(target_os = "windows"), allow(unused_variables))]
   is_interactive_start: bool,
@@ -31,11 +31,18 @@ pub fn handle_window_moved_or_resized(
   state: &mut WmState,
   config: &UserConfig,
 ) -> anyhow::Result<()> {
-  let found_window = state.window_from_native(native_window);
+  let native_window =
+    state.root_container.get_native_window(&native_window_id);
+  let native_window_ref = native_window.as_ref().map(|w| w.as_ref());
+  let found_window = if let Some(nw) = native_window_ref {
+    state.window_from_native(nw)
+  } else {
+    None
+  };
 
   if let Some(window) = found_window {
     let old_frame_position = window.native_properties().frame;
-    let frame_position = try_warn!(window.native_arc().as_ref().frame());
+    let frame_position = try_warn!(window.native().frame());
 
     window.update_native_properties(|properties| {
       properties.frame = frame_position.clone();
@@ -72,8 +79,7 @@ pub fn handle_window_moved_or_resized(
     }
 
     let old_is_maximized = window.native_properties().is_maximized;
-    let is_maximized =
-      try_warn!(window.native_arc().as_ref().is_maximized());
+    let is_maximized = try_warn!(window.native().is_maximized());
 
     // Ignore duplicate move/resize events. Window position changes can
     // trigger multiple events. For example, restoring from maximized can
@@ -94,8 +100,7 @@ pub fn handle_window_moved_or_resized(
     // we should use its previous value for redraws.
     #[cfg(target_os = "windows")]
     {
-      let shadow_borders =
-        try_warn!(window.native_arc().as_ref().shadow_borders());
+      let shadow_borders = try_warn!(window.native().shadow_borders());
       if !is_maximized {
         window.update_native_properties(|properties| {
           properties.shadow_borders = shadow_borders;
@@ -103,8 +108,7 @@ pub fn handle_window_moved_or_resized(
       }
     }
 
-    let is_minimized =
-      try_warn!(window.native_arc().as_ref().is_minimized());
+    let is_minimized = try_warn!(window.native().is_minimized());
 
     // Ignore events for minimized windows. Let them be handled by the
     // `PlatformEvent::WindowMinimized` event handler instead.
@@ -196,7 +200,7 @@ pub fn handle_window_moved_or_resized(
     }
 
     let nearest_monitor = state
-      .nearest_monitor(window.native_arc().as_ref())
+      .nearest_monitor(window.native().as_ref())
       .context("No nearest monitor.")?;
 
     // For `HideMethod::PlaceInCorner`, hiding/showing is implemented by

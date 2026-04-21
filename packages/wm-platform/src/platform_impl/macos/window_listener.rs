@@ -182,7 +182,7 @@ impl WindowListener {
           };
 
           let _ = events_tx.send(WindowEvent::Focused {
-            window: Arc::new(focused_window) as Arc<dyn NativeWindow>,
+            window_id: focused_window.id(),
             notification: crate::WindowEventNotification(None),
           });
         }

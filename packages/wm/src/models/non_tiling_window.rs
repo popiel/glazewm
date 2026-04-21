@@ -2,7 +2,6 @@ use std::{
   cell::{Ref, RefCell, RefMut},
   collections::VecDeque,
   rc::Rc,
-  sync::Arc,
 };
 
 use anyhow::Context;
@@ -11,13 +10,13 @@ use wm_common::{
   ActiveDrag, ContainerDto, DisplayState, GapsConfig, WindowDto,
   WindowRuleConfig, WindowState,
 };
-use wm_platform::{NativeWindow, Rect, RectDelta};
+use wm_platform::{NativeWindow, Rect, RectDelta, WindowId};
 
 use crate::{
   impl_common_getters, impl_container_debug, impl_window_getters,
   models::{
     Container, DirectionContainer, InsertionTarget,
-    NativeWindowProperties, TilingContainer, TilingWindow,
+    NativeWindowProperties, RootContainer, TilingContainer, TilingWindow,
     WindowContainer,
   },
   traits::{CommonGetters, PositionGetters, WindowGetters},
@@ -31,7 +30,7 @@ struct NonTilingWindowInner {
   parent: Option<Container>,
   children: VecDeque<Container>,
   child_focus_order: VecDeque<Uuid>,
-  native: Arc<dyn NativeWindow>,
+  native_id: WindowId,
   native_properties: NativeWindowProperties,
   state: WindowState,
   prev_state: Option<WindowState>,
@@ -49,7 +48,7 @@ impl NonTilingWindow {
   #[allow(clippy::too_many_arguments)]
   pub fn new(
     id: Option<Uuid>,
-    native: Arc<dyn NativeWindow>,
+    native_id: WindowId,
     properties: NativeWindowProperties,
     state: WindowState,
     prev_state: Option<WindowState>,
@@ -65,7 +64,7 @@ impl NonTilingWindow {
       parent: None,
       children: VecDeque::new(),
       child_focus_order: VecDeque::new(),
-      native,
+      native_id,
       native_properties: properties,
       state,
       prev_state,
@@ -80,6 +79,17 @@ impl NonTilingWindow {
     };
 
     Self(Rc::new(RefCell::new(window)))
+  }
+
+  pub fn native_id(&self) -> WindowId {
+    self.0.borrow().native_id
+  }
+
+  pub fn native(&self) -> Rc<dyn NativeWindow> {
+    self
+      .ancestor_root()
+      .get_native_window(&self.native_id())
+      .expect("Native window not found")
   }
 
   pub fn insertion_target(&self) -> Option<InsertionTarget> {
@@ -102,7 +112,7 @@ impl NonTilingWindow {
 
     TilingWindow::new(
       Some(self.id()),
-      self.native_arc(),
+      self.native_id(),
       self.native_properties().clone(),
       prev_state,
       self.border_delta(),
@@ -132,7 +142,7 @@ impl NonTilingWindow {
       border_delta: self.border_delta(),
       floating_placement: self.floating_placement(),
       #[allow(clippy::cast_possible_wrap, clippy::unnecessary_cast)]
-      handle: self.native_arc().as_ref().id().0 as isize,
+      handle: self.native_id().0 as isize,
       title: self.native_properties().title,
       #[cfg(target_os = "windows")]
       class_name: self.native_properties().class_name,

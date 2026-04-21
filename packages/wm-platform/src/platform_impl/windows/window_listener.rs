@@ -135,63 +135,45 @@ impl WindowListener {
         notification,
       },
       EVENT_SYSTEM_FOREGROUND => WindowEvent::Focused {
-        window: Arc::new(NativeWindowImpl::from(NativeWindow::new(
-          handle.0,
-        ))) as _,
+        window_id: WindowId(handle.0),
         notification,
       },
       EVENT_OBJECT_HIDE | EVENT_OBJECT_CLOAKED => WindowEvent::Hidden {
-        window: Arc::new(NativeWindowImpl::from(NativeWindow::new(
-          handle.0,
-        ))) as _,
+        window_id: WindowId(handle.0),
         notification,
       },
       EVENT_OBJECT_LOCATIONCHANGE => WindowEvent::MovedOrResized {
-        window: Arc::new(NativeWindowImpl::from(NativeWindow::new(
-          handle.0,
-        ))) as _,
+        window_id: WindowId(handle.0),
         is_interactive_start: false,
         is_interactive_end: false,
         notification,
       },
       EVENT_SYSTEM_MINIMIZESTART => WindowEvent::Minimized {
-        window: Arc::new(NativeWindowImpl::from(NativeWindow::new(
-          handle.0,
-        ))) as _,
+        window_id: WindowId(handle.0),
         notification,
       },
       EVENT_SYSTEM_MINIMIZEEND => WindowEvent::MinimizeEnded {
-        window: Arc::new(NativeWindowImpl::from(NativeWindow::new(
-          handle.0,
-        ))) as _,
+        window_id: WindowId(handle.0),
         notification,
       },
       EVENT_SYSTEM_MOVESIZESTART => WindowEvent::MovedOrResized {
-        window: Arc::new(NativeWindowImpl::from(NativeWindow::new(
-          handle.0,
-        ))) as _,
+        window_id: WindowId(handle.0),
         is_interactive_start: true,
         is_interactive_end: false,
         notification,
       },
       EVENT_SYSTEM_MOVESIZEEND => WindowEvent::MovedOrResized {
-        window: Arc::new(NativeWindowImpl::from(NativeWindow::new(
-          handle.0,
-        ))) as _,
+        window_id: WindowId(handle.0),
         is_interactive_start: false,
         is_interactive_end: true,
         notification,
       },
       EVENT_OBJECT_SHOW | EVENT_OBJECT_UNCLOAKED => WindowEvent::Shown {
-        window: Arc::new(NativeWindowImpl::from(NativeWindow::new(
-          handle.0,
-        ))) as _,
+        window_id: WindowId(handle.0),
         notification,
       },
       EVENT_OBJECT_NAMECHANGE => WindowEvent::TitleChanged {
-        window: Arc::new(NativeWindowImpl::from(NativeWindow::new(
-          handle.0,
-        ))) as _,
+        window_id: WindowId(handle.0),
         notification,
       },
       _ => return,

@@ -39,8 +39,9 @@ async fn main() -> anyhow::Result<()> {
         err
       );
 
-      let managed_windows =
-        managed_handles.into_iter().map(NativeWindowImpl::from_handle);
+      let managed_windows = managed_handles
+        .into_iter()
+        .map(NativeWindowImpl::from_handle);
 
       for window in managed_windows {
         if let Err(err) = window.show() {

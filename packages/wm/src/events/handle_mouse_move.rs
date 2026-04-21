@@ -42,7 +42,7 @@ pub fn handle_mouse_move(
       // Only one window should ever be actively dragged at a time, but
       // just in case, iterate over all active drag windows.
       for window in active_drag_windows {
-        let new_rect = try_warn!(window.native_arc().as_ref().frame());
+        let new_rect = try_warn!(window.native().frame());
 
         window.update_native_properties(|properties| {
           properties.frame = new_rect;
@@ -85,7 +85,7 @@ pub fn handle_mouse_move(
           state
             .windows()
             .into_iter()
-            .find(|w| w.native_arc().as_ref().id() == window_id)
+            .find(|w| w.native().id() == window_id)
         })
       }
       #[cfg(target_os = "windows")]

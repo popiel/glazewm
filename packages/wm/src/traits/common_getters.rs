@@ -8,7 +8,7 @@ use uuid::Uuid;
 use wm_common::ContainerDto;
 
 use crate::models::{
-  Container, DirectionContainer, Monitor, TilingContainer,
+  Container, DirectionContainer, Monitor, RootContainer, TilingContainer,
   WindowContainer, Workspace,
 };
 
@@ -218,6 +218,16 @@ pub trait CommonGetters {
     Ancestors {
       start: Some(self.as_container()),
     }
+  }
+
+  fn ancestor_root(&self) -> RootContainer {
+    self
+      .self_and_ancestors()
+      .find_map(|container| match container {
+        Container::Root(root) => Some(root),
+        _ => None,
+      })
+      .expect("Container must have root ancestor")
   }
 
   /// Workspace that this container belongs to.

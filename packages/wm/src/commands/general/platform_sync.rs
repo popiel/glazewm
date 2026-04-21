@@ -20,6 +20,11 @@ pub fn platform_sync(
   state: &mut WmState,
   config: &UserConfig,
 ) -> anyhow::Result<()> {
+  // Process due delayed border effects first
+  if state.pending_sync.has_due_border_effects() {
+    process_due_border_effects(state, config)?;
+  }
+
   let focused_container =
     state.focused_container().context("No focused container.")?;
 
@@ -47,7 +52,7 @@ pub fn platform_sync(
     let prev_effects_window = state.prev_effects_window.clone();
 
     if let Ok(window) = focused_container.as_window_container() {
-      apply_window_effects(&window, true, config);
+      apply_window_effects(&window, true, config, state);
       state.prev_effects_window = Some(window.clone());
     } else {
       state.prev_effects_window = None;
@@ -67,7 +72,7 @@ pub fn platform_sync(
       .filter(|window| window.id() != focused_container.id());
 
     for window in unfocused_windows {
-      apply_window_effects(&window, false, config);
+      apply_window_effects(&window, false, config, state);
     }
   }
 
@@ -91,7 +96,7 @@ fn sync_focus(
   // triggered.
   let result = if let Some(window) = native_window {
     tracing::info!("Setting focus to window: {window}");
-    window.native_arc().as_ref().focus()
+    window.native().focus()
   } else {
     tracing::info!("Setting focus to the desktop window.");
     state.dispatcher.reset_focus()
@@ -236,9 +241,7 @@ fn redraw_containers(
           if window.id() == focused_descendant.id() {
             WindowZOrder::Normal
           } else {
-            WindowZOrder::AfterWindow(
-              focused_descendant.native_arc().as_ref().id(),
-            )
+            WindowZOrder::AfterWindow(focused_descendant.native().id())
           }
         } else {
           WindowZOrder::Normal
@@ -256,7 +259,7 @@ fn redraw_containers(
       tracing::info!("Updating window z-order: {window}");
 
       if let Err(err) = window
-        .native_arc()
+        .native()
         .as_ref()
         .as_windows_ext()?
         .set_z_order(&z_order)
@@ -309,14 +312,10 @@ fn redraw_containers(
         };
 
       if is_transitioning_fullscreen {
-        if let Err(err) = window
-          .native_arc()
-          .as_ref()
-          .as_windows_ext()?
-          .mark_fullscreen(matches!(
-            window.state(),
-            WindowState::Fullscreen(_)
-          ))
+        if let Err(err) =
+          window.native().as_ref().as_windows_ext()?.mark_fullscreen(
+            matches!(window.state(), WindowState::Fullscreen(_)),
+          )
         {
           tracing::warn!("Failed to mark window as fullscreen: {}", err);
         }
@@ -336,7 +335,7 @@ fn redraw_containers(
       )
     {
       if let Err(err) = window
-        .native_arc()
+        .native()
         .as_ref()
         .as_windows_ext()?
         .set_taskbar_visibility(is_visible)
@@ -389,7 +388,7 @@ fn reposition_window(
     // Even though the window size is unchanged, `NativeWindow::set_frame`
     // is used instead of `NativeWindow::reposition` because the latter
     // resulted in occasional incorrect positionings on macOS.
-    window.native_arc().as_ref().set_frame(&Rect::from_xy(
+    window.native().set_frame(&Rect::from_xy(
       position_x,
       position_y,
       frame.width(),
@@ -401,12 +400,12 @@ fn reposition_window(
 
   if window.active_drag().is_some() {
     window
-      .native_arc()
+      .native()
       .as_ref()
       .resize(rect.width(), rect.height())?;
   } else {
     #[cfg(target_os = "macos")]
-    window.native_arc().as_ref().set_frame(&rect)?;
+    window.native().set_frame(&rect)?;
 
     #[cfg(target_os = "windows")]
     {
@@ -421,16 +420,15 @@ fn reposition_window(
         // Need to restore window if transitioning from maximized
         // fullscreen to non-maximized fullscreen.
         WindowState::Fullscreen(fullscreen) => {
-          !fullscreen.maximized
-            && window.native_arc().as_ref().is_maximized()?
+          !fullscreen.maximized && window.native().is_maximized()?
         }
         // No need to restore window if it'll be minimized. Transitioning
         // from maximized to minimized works without having to
         // restore.
         WindowState::Minimized => false,
         _ => {
-          window.native_arc().as_ref().is_minimized()?
-            || window.native_arc().as_ref().is_maximized()?
+          window.native().is_minimized()?
+            || window.native().is_maximized()?
         }
       };
 
@@ -438,7 +436,7 @@ fn reposition_window(
         // Restoring to position has the same effect as `ShowWindow` with
         // `SW_RESTORE`, but doesn't cause a flicker.
         window
-          .native_arc()
+          .native()
           .as_ref()
           .as_windows_ext()?
           .restore(Some(&rect))?;
@@ -451,24 +449,24 @@ fn reposition_window(
 
       match &window.state() {
         WindowState::Minimized => {
-          if !window.native_arc().as_ref().is_minimized()? {
-            window.native_arc().as_ref().minimize()?;
+          if !window.native().is_minimized()? {
+            window.native().minimize()?;
           }
         }
         WindowState::Fullscreen(fullscreen)
           if fullscreen.maximized
             && window
-              .native_arc()
+              .native()
               .as_ref()
               .as_windows_ext()?
               .has_window_style(WS_MAXIMIZEBOX) =>
         {
-          if !window.native_arc().as_ref().is_maximized()? {
-            window.native_arc().as_ref().maximize()?;
+          if !window.native().is_maximized()? {
+            window.native().maximize()?;
           }
 
           window
-            .native_arc()
+            .native()
             .as_ref()
             .as_windows_ext()?
             .set_window_pos(z_order, &rect, swp_flags)?;
@@ -477,7 +475,7 @@ fn reposition_window(
           swp_flags |= SWP_FRAMECHANGED;
 
           window
-            .native_arc()
+            .native()
             .as_ref()
             .as_windows_ext()?
             .set_window_pos(z_order, &rect, swp_flags)?;
@@ -488,7 +486,7 @@ fn reposition_window(
           // first move are resolved.
           if window.has_pending_dpi_adjustment() {
             window
-              .native_arc()
+              .native()
               .as_ref()
               .as_windows_ext()?
               .set_window_pos(z_order, &rect, swp_flags)?;
@@ -499,14 +497,14 @@ fn reposition_window(
       // Set visibility based on the hide method.
       if config.value.general.hide_method == HideMethod::Cloak {
         window
-          .native_arc()
+          .native()
           .as_ref()
           .as_windows_ext()?
           .set_cloaked(!is_visible)?;
       } else if is_visible {
-        window.native_arc().as_ref().as_windows_ext()?.show()?;
+        window.native().as_windows_ext()?.show()?;
       } else {
-        window.native_arc().as_ref().as_windows_ext()?.hide()?;
+        window.native().as_windows_ext()?.hide()?;
       }
     }
   }
@@ -557,6 +555,7 @@ fn apply_window_effects(
   window: &WindowContainer,
   is_focused: bool,
   config: &UserConfig,
+  state: &mut WmState,
 ) {
   let window_effects = &config.value.window_effects;
 
@@ -573,7 +572,7 @@ fn apply_window_effects(
   if window_effects.focused_window.border.enabled
     || window_effects.other_windows.border.enabled
   {
-    apply_border_effect(window, effect_config);
+    apply_border_effect(window, effect_config, state);
   }
 
   #[cfg(target_os = "windows")]
@@ -602,6 +601,7 @@ fn apply_window_effects(
 fn apply_border_effect(
   window: &WindowContainer,
   effect_config: &WindowEffectConfig,
+  state: &mut WmState,
 ) {
   let border_color = if effect_config.border.enabled {
     Some(&effect_config.border.color)
@@ -609,23 +609,55 @@ fn apply_border_effect(
     None
   };
 
+  // Apply border color immediately
   let _ = window
-    .native_arc()
-    .as_ref()
+    .native()
     .as_windows_ext()
     .map(|ext| ext.set_border_color(border_color));
 
-  let native = window.native_arc();
-  let border_color = border_color.cloned();
+  // Queue delayed re-apply to handle windows that change their own border
+  // color
+  let window_id = window.native_id();
+  let delay = std::time::Duration::from_millis(50);
+  state
+    .pending_sync
+    .queue_delayed_border_effect(window_id, delay);
+}
 
-  // Re-apply border color after a short delay to better handle
-  // windows that change it themselves.
-  tokio::task::spawn(async move {
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-    _ = native
-      .as_windows_ext()
-      .map(|ext| ext.set_border_color(border_color.as_ref()));
-  });
+#[cfg(target_os = "windows")]
+fn process_due_border_effects(
+  state: &mut WmState,
+  config: &UserConfig,
+) -> anyhow::Result<()> {
+  let due_border_window_ids = state.pending_sync.get_due_border_effects();
+  let window_effects = &config.value.window_effects;
+
+  for window_id in due_border_window_ids {
+    if let Some(window) =
+      state.windows().iter().find(|w| w.native_id() == window_id)
+    {
+      let effect_config = if window.id()
+        == state
+          .prev_effects_window
+          .as_ref()
+          .map(|w| w.id())
+          .unwrap_or_default()
+      {
+        &window_effects.focused_window
+      } else {
+        &window_effects.other_windows
+      };
+      if effect_config.border.enabled {
+        let border_color = Some(&effect_config.border.color);
+        let _ = window
+          .native()
+          .as_windows_ext()
+          .map(|ext| ext.set_border_color(border_color));
+      }
+    }
+  }
+
+  Ok(())
 }
 
 #[cfg(target_os = "windows")]
@@ -633,7 +665,7 @@ fn apply_hide_title_bar_effect(
   window: &WindowContainer,
   effect_config: &WindowEffectConfig,
 ) {
-  _ = window.native_arc().as_ref().as_windows_ext().map(|ext| {
+  _ = window.native().as_windows_ext().map(|ext| {
     ext.set_title_bar_visibility(!effect_config.hide_title_bar.enabled)
   });
 }
@@ -650,7 +682,7 @@ fn apply_corner_effect(
   };
 
   let _ = window
-    .native_arc()
+    .native()
     .as_ref()
     .as_windows_ext()
     .map(|ext| ext.set_corner_style(corner_style));
@@ -669,7 +701,7 @@ fn apply_transparency_effect(
   };
 
   let _ = window
-    .native_arc()
+    .native()
     .as_ref()
     .as_windows_ext()
     .map(|ext| ext.set_transparency(transparency));

@@ -122,7 +122,7 @@ impl ApplicationObserver {
       // running on startup.
       if !is_startup {
         if let Err(err) = events_tx.send(WindowEvent::Shown {
-          window: (*window).clone(),
+          window_id: window.id(),
           notification: crate::WindowEventNotification(None),
         }) {
           tracing::warn!(
@@ -215,7 +215,7 @@ impl ApplicationObserver {
   pub(crate) fn emit_all_windows_hidden(&self) {
     for window in self.app_windows.lock().unwrap().iter() {
       if let Err(err) = self.events_tx.send(WindowEvent::Hidden {
-        window: (*window).clone(),
+        window_id: window.id(),
         notification: crate::WindowEventNotification(None),
       }) {
         tracing::warn!(
@@ -230,7 +230,7 @@ impl ApplicationObserver {
   pub(crate) fn emit_all_windows_shown(&self) {
     for window in self.app_windows.lock().unwrap().iter() {
       if let Err(err) = self.events_tx.send(WindowEvent::Shown {
-        window: (*window).clone(),
+        window_id: window.id(),
         notification: crate::WindowEventNotification(None),
       }) {
         tracing::warn!(
@@ -338,25 +338,25 @@ impl ApplicationObserver {
 
     let window_event = match notification.name.as_str() {
       "AXFocusedWindowChanged" => WindowEvent::Focused {
-        window,
+        window_id: window.id(),
         notification: crate::WindowEventNotification(Some(notification)),
       },
       "AXWindowMoved" | "AXWindowResized" => WindowEvent::MovedOrResized {
-        window,
+        window_id: window.id(),
         is_interactive_start: false,
         is_interactive_end: false,
         notification: crate::WindowEventNotification(Some(notification)),
       },
       "AXWindowMiniaturized" => WindowEvent::Minimized {
-        window,
+        window_id: window.id(),
         notification: crate::WindowEventNotification(Some(notification)),
       },
       "AXWindowDeminiaturized" => WindowEvent::MinimizeEnded {
-        window,
+        window_id: window.id(),
         notification: crate::WindowEventNotification(Some(notification)),
       },
       "AXTitleChanged" => WindowEvent::TitleChanged {
-        window,
+        window_id: window.id(),
         notification: crate::WindowEventNotification(Some(notification)),
       },
       _ => {

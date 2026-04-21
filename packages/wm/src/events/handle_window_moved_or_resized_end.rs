@@ -40,15 +40,14 @@ pub fn handle_window_moved_or_resized_end(
 
   match &window {
     WindowContainer::NonTilingWindow(window) => {
-      let is_maximized =
-        try_warn!(window.native_arc().as_ref().is_maximized());
+      let is_maximized = try_warn!(window.native().is_maximized());
 
       window.update_native_properties(|properties| {
         properties.is_maximized = is_maximized;
       });
 
       let nearest_monitor = state
-        .nearest_monitor(window.native_arc().as_ref())
+        .nearest_monitor(window.native().as_ref())
         .context("Failed to get workspace of nearest monitor.")?;
 
       let should_fullscreen = window.should_fullscreen(

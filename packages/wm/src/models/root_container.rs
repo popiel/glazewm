@@ -1,13 +1,13 @@
 use std::{
   cell::{Ref, RefCell, RefMut},
-  collections::VecDeque,
+  collections::{HashMap, VecDeque},
   rc::Rc,
 };
 
 use anyhow::bail;
 use uuid::Uuid;
 use wm_common::{ContainerDto, RootContainerDto};
-use wm_platform::Rect;
+use wm_platform::{NativeWindow, Rect, WindowId};
 
 use crate::{
   impl_common_getters, impl_container_debug,
@@ -27,6 +27,7 @@ struct RootContainerInner {
   parent: Option<Container>,
   children: VecDeque<Container>,
   child_focus_order: VecDeque<Uuid>,
+  native_windows: HashMap<WindowId, Rc<dyn NativeWindow>>,
 }
 
 impl Default for RootContainer {
@@ -36,6 +37,7 @@ impl Default for RootContainer {
       parent: None,
       children: VecDeque::new(),
       child_focus_order: VecDeque::new(),
+      native_windows: HashMap::new(),
     };
 
     Self(Rc::new(RefCell::new(root)))
@@ -45,6 +47,29 @@ impl Default for RootContainer {
 impl RootContainer {
   pub fn new() -> Self {
     Self::default()
+  }
+
+  pub fn insert_native_window(
+    &self,
+    window: Rc<dyn NativeWindow>,
+  ) -> WindowId {
+    let id = window.id();
+    self.0.borrow_mut().native_windows.insert(id, window);
+    id
+  }
+
+  pub fn get_native_window(
+    &self,
+    id: &WindowId,
+  ) -> Option<Rc<dyn NativeWindow>> {
+    self.0.borrow().native_windows.get(id).cloned()
+  }
+
+  pub fn remove_native_window(
+    &self,
+    id: &WindowId,
+  ) -> Option<Rc<dyn NativeWindow>> {
+    self.0.borrow_mut().native_windows.remove(id)
   }
 
   pub fn monitors(&self) -> Vec<Monitor> {

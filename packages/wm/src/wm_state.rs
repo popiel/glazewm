@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Instant};
+use std::{rc::Rc, time::Instant};
 
 use anyhow::Context;
 use tokio::sync::mpsc::{self};
@@ -128,13 +128,14 @@ impl WmState {
     for native_window in
       self.dispatcher.visible_windows()?.into_iter().rev()
     {
-      let native_arc: Arc<dyn NativeWindow> = Arc::new(native_window);
+      let native_rc: Rc<dyn NativeWindow> = Rc::new(native_window);
+      let native_window_id = native_rc.id();
       let nearest_workspace = self
-        .nearest_monitor(native_arc.as_ref())
+        .nearest_monitor(native_rc.as_ref())
         .and_then(|m| m.displayed_workspace());
 
       if let Some(workspace) = nearest_workspace {
-        manage_window(native_arc, Some(workspace.into()), self, config)?;
+        manage_window(native_rc, Some(workspace.into()), self, config)?;
       }
     }
 
@@ -334,7 +335,7 @@ impl WmState {
     self
       .windows()
       .into_iter()
-      .find(|window| window.native_arc().as_ref().id() == id)
+      .find(|window| window.native().id() == id)
   }
 
   pub fn workspace_by_name(
@@ -666,7 +667,7 @@ impl WmState {
     let invalid_windows = self
       .windows()
       .into_iter()
-      .filter(|window| !window.native_arc().as_ref().is_valid());
+      .filter(|window| !window.native().is_valid());
 
     for window in invalid_windows {
       tracing::info!("Removing invalid window: {}", window);
@@ -674,11 +675,8 @@ impl WmState {
     }
 
     // Prune ignored windows that are no longer valid.
-    let window_ids: Vec<_> = self
-      .windows()
-      .iter()
-      .map(|w| w.native_arc().as_ref().id())
-      .collect();
+    let window_ids: Vec<_> =
+      self.windows().iter().map(|w| w.native().id()).collect();
     self.ignored_windows.retain(|id| window_ids.contains(id));
 
     Ok(())
@@ -693,7 +691,7 @@ impl Drop for WmState {
       // Redraw windows to their intended positions. On macOS, this will
       // unhide windows that are on other workspaces.
       if let Ok(rect) = window.to_rect() {
-        if let Err(err) = window.native_arc().as_ref().set_frame(&rect) {
+        if let Err(err) = window.native().set_frame(&rect) {
           warn!("Failed to redraw window on cleanup: {:?}", err);
         }
       }
@@ -702,8 +700,7 @@ impl Drop for WmState {
       #[cfg(target_os = "windows")]
       {
         if let Err(err) = window
-          .native_arc()
-          .as_ref()
+          .native()
           .as_windows_ext()
           .map(NativeWindowWindowsExt::show)
         {
@@ -711,16 +708,14 @@ impl Drop for WmState {
         }
 
         let _ = window
-          .native_arc()
-          .as_ref()
+          .native()
           .as_windows_ext()
           .map(|ext| ext.set_taskbar_visibility(true));
         let _ = window
-          .native_arc()
-          .as_ref()
+          .native()
           .as_windows_ext()
           .map(|ext| ext.set_border_color(None));
-        let _ = window.native_arc().as_ref().as_windows_ext().map(|ext| {
+        let _ = window.native().as_windows_ext().map(|ext| {
           ext.set_transparency(&OpacityValue::from_alpha(u8::MAX))
         });
       }

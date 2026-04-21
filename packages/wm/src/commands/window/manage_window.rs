@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::rc::Rc;
 
 use anyhow::Context;
 use tracing::info;
@@ -20,7 +20,7 @@ use crate::{
 };
 
 pub fn manage_window(
-  native_window: Arc<dyn NativeWindow>,
+  native_window: Rc<dyn NativeWindow>,
   target_parent: Option<Container>,
   state: &mut WmState,
   config: &mut UserConfig,
@@ -153,7 +153,7 @@ fn check_is_manageable(
 }
 
 fn create_window(
-  native_window: Arc<dyn NativeWindow>,
+  native_window: Rc<dyn NativeWindow>,
   native_properties: NativeWindowProperties,
   target_parent: Option<Container>,
   state: &mut WmState,
@@ -162,6 +162,8 @@ fn create_window(
   let nearest_monitor = state
     .nearest_monitor(native_window.as_ref())
     .context("No nearest monitor.")?;
+
+  let native_id = state.root_container.insert_native_window(native_window);
 
   let nearest_workspace = nearest_monitor
     .displayed_workspace()
@@ -217,7 +219,7 @@ fn create_window(
   let window_container: WindowContainer = match window_state {
     WindowState::Tiling => TilingWindow::new(
       None,
-      native_window,
+      native_id,
       native_properties,
       None,
       border_delta,
@@ -230,7 +232,7 @@ fn create_window(
     .into(),
     _ => NonTilingWindow::new(
       None,
-      native_window,
+      native_id,
       native_properties,
       window_state,
       None,
