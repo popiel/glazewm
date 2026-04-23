@@ -7,6 +7,7 @@ use wm_common::{
 use crate::{
   commands::container::set_focused_descendant,
   models::{WindowContainer, *},
+  test_utils::mock_native_window_with_tracker,
   traits::*,
   wm::WindowManager,
   wm_state::WmState,
@@ -313,8 +314,27 @@ fn test_fullscreen_only_affects_target_window() {
   let dispatcher =
     wm_platform::Dispatcher::mock_with_tracker(Arc::clone(&tracker));
 
+  let native_windows = vec![
+    mock_native_window_with_tracker(
+      window_left,
+      "left",
+      Some(Arc::clone(&tracker)),
+    ),
+    mock_native_window_with_tracker(
+      window_upper,
+      "upper_right",
+      Some(Arc::clone(&tracker)),
+    ),
+    mock_native_window_with_tracker(
+      window_lower,
+      "lower_right",
+      Some(Arc::clone(&tracker)),
+    ),
+  ];
+
   let mut state = WmState::mock()
     .dispatcher(dispatcher)
+    .native_windows(native_windows)
     .monitors(vec![Monitor::mock()
       .workspaces(vec![Workspace::mock()
         .tiling_containers(vec![SplitContainer::mock()

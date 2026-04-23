@@ -3,22 +3,24 @@
 //! This module provides default values and helper functions used by the
 //! mock builders in the model modules.
 
+use std::{rc::Rc, sync::Arc};
+
 use bon::bon;
 use tokio::sync::mpsc;
 use wm_common::{
   FloatingStateConfig, GapsConfig, TilingDirection, WindowState, WmEvent,
   WorkspaceConfig,
 };
-use wm_platform::{Dispatcher, Display, Rect, RectDelta};
+use wm_platform::{Dispatcher, Display, Rect, RectDelta, WindowId};
 
 use crate::{
   commands::container::attach_container,
   models::{
     Monitor, NativeMonitorProperties, NativeWindowProperties,
-    NonTilingWindow, SplitContainer, TilingContainer, TilingWindow,
-    Workspace,
+    NonTilingWindow, RootContainer, SplitContainer, TilingContainer,
+    TilingWindow, WindowContainer, Workspace,
   },
-  traits::TilingSizeGetters,
+  traits::{CommonGetters, TilingSizeGetters, WindowGetters},
   wm_state::WmState,
 };
 
@@ -45,6 +47,51 @@ pub fn mock_working_area() -> Rect {
 
 pub fn mock_window_rect() -> Rect {
   Rect::from_xy(0, 0, MOCK_WINDOW_WIDTH, MOCK_WINDOW_HEIGHT)
+}
+
+/// Creates a mock native window with the given ID, title, and tracker.
+#[allow(clippy::needless_pass_by_value)]
+pub fn mock_native_window_with_tracker(
+  id: WindowId,
+  title: &str,
+  tracker: Option<Arc<wm_platform::test_utils::CallTracker>>,
+) -> Rc<dyn wm_platform::NativeWindow> {
+  let tracker = tracker.unwrap_or_else(|| {
+    Arc::new(wm_platform::test_utils::CallTracker::default())
+  });
+  Rc::new(
+    wm_platform::test_utils::MockNativeWindow::mock()
+      .id(id)
+      .title(title.into())
+      .process_name("test-process".into())
+      .frame(mock_window_rect())
+      .position((0.0, 0.0))
+      .size((f64::from(MOCK_WINDOW_WIDTH), f64::from(MOCK_WINDOW_HEIGHT)))
+      .tracker(Arc::clone(&tracker))
+      .call(),
+  )
+}
+
+/// Registers mock native windows for all windows in the container tree
+/// that don't already have one registered.
+#[allow(clippy::needless_pass_by_value)]
+pub fn register_windows_in_container_tree(
+  root: &RootContainer,
+  tracker: Option<&Arc<wm_platform::test_utils::CallTracker>>,
+) {
+  for container in root.descendants() {
+    if let Ok(window) = container.try_into() as Result<WindowContainer, _>
+    {
+      let native_id = window.native_id();
+      if root.get_native_window(native_id).is_none() {
+        root.insert_native_window(mock_native_window_with_tracker(
+          native_id,
+          &window.native_properties().title,
+          tracker.cloned(),
+        ));
+      }
+    }
+  }
 }
 
 pub fn mock_border_delta() -> RectDelta {
@@ -243,8 +290,16 @@ impl WmState {
     #[builder(default = mock_channel_sender())]
     exit_tx: mpsc::UnboundedSender<()>,
     #[builder(default = vec![])] monitors: Vec<Monitor>,
+    #[builder(default = vec![])] native_windows: Vec<
+      Rc<dyn wm_platform::NativeWindow>,
+    >,
+    tracker: Option<Arc<wm_platform::test_utils::CallTracker>>,
   ) -> Self {
     let state = WmState::new(dispatcher, event_tx, exit_tx);
+
+    for native_window in native_windows {
+      state.root_container.insert_native_window(native_window);
+    }
 
     for monitor in monitors {
       attach_container(
@@ -254,6 +309,11 @@ impl WmState {
       )
       .unwrap();
     }
+
+    register_windows_in_container_tree(
+      &state.root_container,
+      tracker.as_ref(),
+    );
 
     state
   }

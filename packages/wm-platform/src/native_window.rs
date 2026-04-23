@@ -439,7 +439,7 @@ impl NativeWindowWindowsExt for NativeWindowImpl {
 /// Main trait for window operations.
 ///
 /// This trait is dyn-compatible and can be used with `dyn NativeWindow`.
-pub trait NativeWindow: Send + Sync {
+pub trait NativeWindow {
   /// Gets the unique identifier for this window.
   fn id(&self) -> WindowId;
 
