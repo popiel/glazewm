@@ -58,7 +58,7 @@ pub enum WindowZOrder {
 ///
 /// This trait is dyn-compatible.
 #[cfg(target_os = "macos")]
-pub trait NativeWindowExtMacOs: Send + Sync {
+pub trait NativeWindowExtMacOs {
   /// Gets the `AXUIElement` instance for this window.
   ///
   /// # Platform-specific
@@ -145,7 +145,7 @@ impl NativeWindowExtMacOs for NativeWindowImpl {
 ///
 /// This trait is dyn-compatible.
 #[cfg(target_os = "windows")]
-pub trait NativeWindowWindowsExt: Send + Sync {
+pub trait NativeWindowWindowsExt {
   /// Creates a [`NativeWindowImpl`] from a window handle.
   ///
   /// # Platform-specific
