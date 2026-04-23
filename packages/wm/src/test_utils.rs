@@ -50,13 +50,12 @@ pub fn mock_window_rect() -> Rect {
 }
 
 /// Creates a mock native window with the given ID, title, and tracker.
-#[allow(clippy::needless_pass_by_value)]
 pub fn mock_native_window_with_tracker(
   id: WindowId,
   title: &str,
-  tracker: Option<Arc<wm_platform::test_utils::CallTracker>>,
+  tracker: Option<&Arc<wm_platform::test_utils::CallTracker>>,
 ) -> Rc<dyn wm_platform::NativeWindow> {
-  let tracker = tracker.unwrap_or_else(|| {
+  let tracker = tracker.cloned().unwrap_or_else(|| {
     Arc::new(wm_platform::test_utils::CallTracker::default())
   });
   Rc::new(
@@ -74,7 +73,6 @@ pub fn mock_native_window_with_tracker(
 
 /// Registers mock native windows for all windows in the container tree
 /// that don't already have one registered.
-#[allow(clippy::needless_pass_by_value)]
 pub fn register_windows_in_container_tree(
   root: &RootContainer,
   tracker: Option<&Arc<wm_platform::test_utils::CallTracker>>,
@@ -87,7 +85,7 @@ pub fn register_windows_in_container_tree(
         root.insert_native_window(mock_native_window_with_tracker(
           native_id,
           &window.native_properties().title,
-          tracker.cloned(),
+          tracker,
         ));
       }
     }

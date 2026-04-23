@@ -315,20 +315,16 @@ fn test_fullscreen_only_affects_target_window() {
     wm_platform::Dispatcher::mock_with_tracker(Arc::clone(&tracker));
 
   let native_windows = vec![
-    mock_native_window_with_tracker(
-      window_left,
-      "left",
-      Some(Arc::clone(&tracker)),
-    ),
+    mock_native_window_with_tracker(window_left, "left", Some(&tracker)),
     mock_native_window_with_tracker(
       window_upper,
       "upper_right",
-      Some(Arc::clone(&tracker)),
+      Some(&tracker),
     ),
     mock_native_window_with_tracker(
       window_lower,
       "lower_right",
-      Some(Arc::clone(&tracker)),
+      Some(&tracker),
     ),
   ];
 
